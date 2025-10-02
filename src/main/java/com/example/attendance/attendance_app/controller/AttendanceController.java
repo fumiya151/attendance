@@ -1,27 +1,43 @@
 package com.example.attendance.attendance_app.controller;
 
 import com.example.attendance.attendance_app.dto.AttendanceRequest;
+import com.example.attendance.attendance_app.dto.AttendanceDto;
+import com.example.attendance.attendance_app.model.Attendance;
+import com.example.attendance.attendance_app.service.AttendanceService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 @RestController
 @RequestMapping("/api/attendance")
+@RequiredArgsConstructor
 public class AttendanceController {
+
+    private final AttendanceService attendanceService;
 
     @PostMapping("/stamp")
     public ResponseEntity<String> recordAttendance(@RequestBody AttendanceRequest request) {
-        // 本来はここでデータベースに保存する処理を行いますが、
-        // まずは受け取った情報を標準出力に表示します。
-        System.out.println("[" + LocalDateTime.now() + "] Received attendance stamp:");
-        System.out.println("  Employee ID: " + request.getEmployeeId());
-        System.out.println("  Employee Code: " + request.getEmployeeCode());
-        System.out.println("  Name: " + request.getName());
-        System.out.println("  Type: " + request.getAttendanceType());
+        Attendance savedAttendance = attendanceService.recordAttendance(request);
 
-        String message = String.format("%sさんの「%s」を記録しました。", request.getName(), request.getAttendanceType());
+        String formattedTimestamp = savedAttendance.getStampTime()
+                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+
+        String message = String.format(
+                "%sさんの「%s」を記録しました。(%s)",
+                request.getName(), // Use name from request to avoid lazy loading issues
+                savedAttendance.getStampType(),
+                formattedTimestamp
+        );
 
         return ResponseEntity.ok(message);
+    }
+
+    @GetMapping("/latest/{employeeId}")
+    public ResponseEntity<AttendanceDto> getLatestAttendance(@PathVariable Long employeeId) {
+        return attendanceService.getLatestAttendance(employeeId)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 }

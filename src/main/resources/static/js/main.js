@@ -3,6 +3,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedUserName = '';
     let selectedUserCode = '';
 
+    const buttons = {
+        '出勤': document.querySelector('.is-in'),
+        '退勤': document.querySelector('.is-out'),
+        '休憩開始': document.querySelector('.is-break-start'),
+        '休憩終了': document.querySelector('.is-break-end')
+    };
+
     // リアルタイム時計更新
     function updateTime() {
         const now = new Date();
@@ -39,6 +46,50 @@ document.addEventListener('DOMContentLoaded', () => {
             listElement.innerHTML = '<p style="color: red;">従業員リストの読み込みに失敗しました。</p>';
         }
     }
+
+    // ボタンの状態を更新する
+    async function updateButtonStates(employeeId) {
+        // まずすべてのボタンを一旦有効化
+        Object.values(buttons).forEach(btn => btn.disabled = false);
+
+        if (!employeeId) {
+            // 従業員が選択されていない場合はすべて非活性
+            Object.values(buttons).forEach(btn => btn.disabled = true);
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/attendance/latest/${employeeId}`);
+            if (response.ok) {
+                const latestAttendance = await response.json();
+                const lastStampType = latestAttendance.stampType;
+
+                if (lastStampType === '出勤') {
+                    buttons['出勤'].disabled = true;
+                } else if (lastStampType === '退勤') {
+                    // 1日の終わりなので、出勤以外はすべて非活性
+                    buttons['退勤'].disabled = true;
+                    buttons['休憩開始'].disabled = true;
+                    buttons['休憩終了'].disabled = true;
+                } else if (lastStampType === '休憩開始') {
+                    buttons['出勤'].disabled = true;
+                    buttons['休憩開始'].disabled = true;
+                } else if (lastStampType === '休憩終了') {
+                    buttons['出勤'].disabled = true;
+                    buttons['休憩終了'].disabled = true;
+                }
+            } else if (response.status === 404) {
+                // まだ打刻がない従業員
+                buttons['退勤'].disabled = true;
+                buttons['休憩開始'].disabled = true;
+                buttons['休憩終了'].disabled = true;
+            }
+        } catch (error) {
+            console.error('Error fetching latest attendance:', error);
+            // エラー時は念のためすべて無効化
+            Object.values(buttons).forEach(btn => btn.disabled = true);
+        }
+    }
     
     // 従業員選択時の処理
     window.selectEmployee = function(id, name, code, element) {
@@ -57,6 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('message-area').className = 'message-box is-info';
 
         document.querySelector('.selected-user-info .prompt').style.display = 'none';
+        updateButtonStates(id); // ボタンの状態を更新
     }
 
     // 打刻処理
@@ -85,13 +137,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify(attendanceData),
             });
 
+            const responseText = await response.text();
+
             if (response.ok) {
-                const result = await response.text();
-                messageArea.textContent = `✅ ${result}`;
+                messageArea.textContent = `✅ ${responseText}`;
                 messageArea.className = 'message-box is-success';
+                updateButtonStates(selectedUserId); // 打刻成功後にボタン状態を更新
             } else {
-                const errorText = await response.text();
-                throw new Error(errorText || 'サーバーでエラーが発生しました。');
+                throw new Error(responseText || 'サーバーでエラーが発生しました。');
             }
 
         } catch (error) {
@@ -99,21 +152,8 @@ document.addEventListener('DOMContentLoaded', () => {
             messageArea.textContent = `❌ 打刻に失敗しました: ${error.message}`;
             messageArea.className = 'message-box is-error';
         }
-        
-        // 5秒後に選択状態とメッセージをリセット
-        setTimeout(() => {
-            selectedUserId = null;
-            selectedUserName = '';
-            selectedUserCode = '';
-            document.getElementById('selected-name').textContent = '';
-            document.querySelector('.selected-user-info .prompt').style.display = 'block';
-            document.querySelectorAll('.employee-item').forEach(item => {
-                item.classList.remove('is-selected');
-            });
-            messageArea.textContent = '';
-            messageArea.className = 'message-box';
-        }, 5000);
     }
 
     fetchAndRenderEmployees();
-});;
+    updateButtonStates(null); // 初期状態では出勤以外は非活性
+});

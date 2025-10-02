@@ -140,6 +140,18 @@ body {
     transition: background-color 0.2s, transform 0.1s, box-shadow 0.2s;
 }
 
+.stamp-button:disabled {
+    background-color: #cccccc;
+    color: #666666;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}
+
+.stamp-button:disabled:hover {
+    background-color: #cccccc;
+}
+
 .stamp-button:active {
     transform: scale(0.98);
 }
