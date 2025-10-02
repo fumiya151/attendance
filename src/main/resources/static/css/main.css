@@ -1,0 +1,177 @@
+/* グローバル設定 (前回のモダンな設定を維持) */
+body {
+    font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #eef1f5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    color: #2c3e50;
+}
+
+.app-container {
+    width: 90%;
+    max-width: 1100px; /* 横幅を広げてリストと打刻エリアを配置 */
+    height: 80vh; /* 高さを固定 (タブレット利用を想定) */
+    display: flex; /* Flexboxで左右分割 */
+    background-color: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1);
+    overflow: hidden; /* 角丸に合わせて内容をクリップ */
+}
+
+/* ---------------------------------- */
+/* 左サイド：従業員リストパネル */
+/* ---------------------------------- */
+.employee-list-panel {
+    width: 35%; /* 35%の幅 */
+    background-color: #f8f9fa; /* リストエリアの背景色 */
+    padding: 30px 0;
+    border-right: 1px solid #e0e0e0;
+    display: flex;
+    flex-direction: column;
+}
+
+.panel-title {
+    font-size: 1.5em;
+    font-weight: 600;
+    margin: 0 30px 20px;
+    color: #34495e;
+}
+
+.employee-list {
+    flex-grow: 1;
+    overflow-y: auto; /* リストが長い場合にスクロール可能に */
+}
+
+.employee-item {
+    padding: 18px 30px;
+    font-size: 1.4em;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: left;
+    transition: background-color 0.2s, color 0.2s;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.employee-item:hover {
+    background-color: #e9ecef;
+}
+
+.employee-item.is-selected {
+    background-color: #3498db; /* 選択時の色 */
+    color: white;
+    font-weight: 700;
+}
+
+/* ---------------------------------- */
+/* 右サイド：打刻パネル */
+/* ---------------------------------- */
+.stamp-panel {
+    width: 65%; /* 65%の幅 */
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between; /* 要素を上下に広げる */
+    text-align: center;
+}
+
+/* 時計表示エリア */
+.header-time {
+    margin-bottom: 20px;
+}
+
+.time-main {
+    font-size: 5em; /* リストとのバランスで少し小さく */
+    font-weight: 700;
+    color: #34495e;
+    line-height: 1.1;
+}
+
+.time-sub {
+    font-size: 1.2em;
+    color: #7f8c8d;
+    margin-top: 5px;
+}
+
+/* 選択されたユーザー情報 */
+.selected-user-info {
+    min-height: 60px;
+    margin-bottom: 30px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.selected-user-info .prompt {
+    font-size: 1.2em;
+    color: #7f8c8d;
+    display: block; /* 常に表示 */
+}
+
+.selected-user-info .name-display {
+    font-size: 2.5em;
+    font-weight: bold;
+    color: #e67e22; /* ハイライトカラー */
+    display: block;
+}
+
+/* 打刻ボタンエリア (前回のデザインを流用) */
+.stamp-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; 
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.stamp-button {
+    height: 120px;
+    font-size: 2.2em;
+    font-weight: 600;
+    color: white;
+    border: none;
+    border-radius: 15px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: background-color 0.2s, transform 0.1s, box-shadow 0.2s;
+}
+
+.stamp-button:active {
+    transform: scale(0.98);
+}
+
+.is-in { background-color: #2ecc71; }
+.is-in:hover { background-color: #27ae60; }
+
+.is-out { background-color: #e74c3c; }
+.is-out:hover { background-color: #c0392b; }
+
+.is-break-start { background-color: #f1c40f; color: #333;}
+.is-break-start:hover { background-color: #f39c12; }
+
+.is-break-end { background-color: #9b59b6; }
+.is-break-end:hover { background-color: #8e44ad; }
+
+/* メッセージ表示エリア (前回のデザインを流用) */
+.message-box {
+    padding: 15px;
+    border-radius: 12px;
+    font-size: 1.1em;
+    min-height: 20px;
+    color: #7f8c8d;
+    background-color: #ecf0f1;
+}
+
+.message-box.is-error {
+    background-color: #f8d7da;
+    color: #c0392b;
+}
+
+.message-box.is-success {
+    background-color: #d4edda;
+    color: #27ae60;
+}

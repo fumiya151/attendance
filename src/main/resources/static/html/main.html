@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Time Clock (Minimal)</title>
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+    <div class="app-container">
+        
+        <div class="employee-list-panel">
+            <h2 class="panel-title">従業員リスト</h2>
+            <div id="employee-list" class="employee-list">
+                <!-- 従業員リストはJavaScriptによって生成されます -->
+            </div>
+        </div>
+
+        <div class="stamp-panel">
+            <div class="header-time">
+                <div id="current-time" class="time-main">00:00</div>
+                <div id="current-date" class="time-sub">0000年0月0日 (曜)</div>
+            </div>
+
+            <div id="selected-user-info" class="selected-user-info">
+                <span class="prompt">リストから自分の名前を選択</span>
+                <span id="selected-name" class="name-display"></span>
+            </div>
+
+            <div class="stamp-grid">
+                <button class="stamp-button is-in" onclick="stamp('出勤')">出勤</button>
+                <button class="stamp-button is-out" onclick="stamp('退勤')">退勤</button>
+                <button class="stamp-button is-break-start" onclick="stamp('休憩開始')">休憩開始</button>
+                <button class="stamp-button is-break-end" onclick="stamp('休憩終了')">休憩終了</button>
+            </div>
+            
+            <div id="message-area" class="message-box"></div>
+        </div>
+    </div>
+
+    <script src="/js/main.js" defer></script>
+</body>
+</html>
