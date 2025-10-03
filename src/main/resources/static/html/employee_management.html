@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>勤怠管理システム - 従業員管理</title>
+    <link rel="stylesheet" href="../css/admin_common.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="admin-dashboard">
+        
+        <aside class="sidebar">
+            <h1 class="logo">勤怠管理</h1>
+            <nav class="nav-menu">
+                <a href="admin_main.html" class="nav-item" data-target="dashboard">
+                    <i class="fas fa-chart-line"></i> ダッシュボード
+                </a>
+                <a href="employee_management.html" class="nav-item active" data-target="employees">
+                    <i class="fas fa-users"></i> 従業員管理
+                </a>
+                <a href="attendance_log.html" class="nav-item" data-target="attendance-logs">
+                    <i class="fas fa-clock"></i> 勤怠ログ/修正
+                </a>
+                <a href="payroll_calculation.html" class="nav-item" data-target="payroll">
+                    <i class="fas fa-calculator"></i> 給与計算・集計
+                </a>
+                <a href="system_settings.html" class="nav-item" data-target="settings">
+                    <i class="fas fa-cogs"></i> システム設定
+                </a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="header">
+                <h2>従業員管理</h2>
+                <div class="user-info">
+                    <span>管理者 (Admin)</span>
+                    <a href="login.html" class="logout-btn">ログアウト</a>
+                </div>
+            </header>
+
+            <section id="employees" class="content-view active">
+                <h3>従業員マスタ管理</h3>
+                <div class="action-bar">
+                    <input type="text" placeholder="氏名、コードで検索..." class="search-input">
+                    <button class="primary-btn"><i class="fas fa-plus"></i> 新規従業員登録</button>
+                    <button class="secondary-btn"><i class="fas fa-file-export"></i> CSV出力</button>
+                </div>
+                
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>コード</th>
+                            <th>氏名</th>
+                            <th>部署</th>
+                            <th>在職状況</th>
+                            <th>アクション</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>A001</td>
+                            <td>佐藤 太郎</td>
+                            <td>営業部</td>
+                            <td><span class="status-active">在職中</span></td>
+                            <td>
+                                <button class="small-btn edit-btn"><i class="fas fa-pen"></i> 編集</button>
+                                <button class="small-btn delete-btn"><i class="fas fa-trash-alt"></i> 削除</button>
+                            </td>
+                        </tr>
+                        </tbody>
+                </table>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

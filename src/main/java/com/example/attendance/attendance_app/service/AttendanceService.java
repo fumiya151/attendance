@@ -25,6 +25,8 @@ public class AttendanceService {
         Employee employee = employeeRepository.findById(request.getEmployeeId())
                 .orElseThrow(() -> new RuntimeException("Employee not found with id: " + request.getEmployeeId()));
 
+        validateAttendanceRequest(request);
+
         Attendance attendance = new Attendance();
         attendance.setEmployee(employee);
         attendance.setStampTime(OffsetDateTime.now());
@@ -32,6 +34,46 @@ public class AttendanceService {
         // 'note' is not provided in the request, so it will be null.
 
         return attendanceRepository.save(attendance);
+    }
+
+    private void validateAttendanceRequest(AttendanceRequest request) {
+        Optional<AttendanceDto> latestAttendanceOpt = getLatestAttendance(request.getEmployeeId());
+        String newStampType = request.getAttendanceType();
+
+        if (latestAttendanceOpt.isEmpty()) {
+            if (!newStampType.equals("出勤")) {
+                throw new IllegalStateException("最初の打刻は「出勤」である必要があります。");
+            }
+            return;
+        }
+
+        String lastStampType = latestAttendanceOpt.get().getStampType();
+
+        switch (lastStampType) {
+            case "出勤":
+                if (!newStampType.equals("退勤") && !newStampType.equals("休憩開始")) {
+                    throw new IllegalStateException("「出勤」の後は「退勤」または「休憩開始」のみ可能です。");
+                }
+                break;
+            case "退勤":
+                 if (newStampType.equals("出勤")) {
+                    // 1日に複数回の出退勤を許可する場合
+                    return;
+                }
+                throw new IllegalStateException("本日は既に「退勤」済みです。");
+            case "休憩開始":
+                if (!newStampType.equals("休憩終了")) {
+                    throw new IllegalStateException("「休憩開始」の後は「休憩終了」のみ可能です。");
+                }
+                break;
+            case "休憩終了":
+                if (!newStampType.equals("退勤") && !newStampType.equals("休憩開始")) {
+                    throw new IllegalStateException("「休憩終了」の後は「退勤」または「休憩開始」のみ可能です。");
+                }
+                break;
+            default:
+                throw new IllegalStateException("不明な打刻状態です。");
+        }
     }
 
     public Optional<AttendanceDto> getLatestAttendance(Long employeeId) {

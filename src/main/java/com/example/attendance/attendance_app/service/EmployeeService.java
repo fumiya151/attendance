@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -19,6 +20,15 @@ public class EmployeeService {
         return employeeRepository.findAll().stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
+    }
+
+    public boolean login(String employeeCode, String password) {
+        Optional<Employee> employeeOptional = employeeRepository.findByEmployeeCode(employeeCode);
+        if (employeeOptional.isPresent()) {
+            Employee employee = employeeOptional.get();
+            return password.equals(employee.getPassword());
+        }
+        return false;
     }
 
     private EmployeeDto convertToDto(Employee employee) {

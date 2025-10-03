@@ -1,0 +1,28 @@
+/* attendance_log.css */
+
+/* ステータスラベル */
+.status-approved {
+    color: #28a745; /* 緑 */
+    font-weight: 600;
+}
+
+.status-pending {
+    color: #fd7e14; /* オレンジ */
+    font-weight: 600;
+}
+
+.status-rejected {
+    color: #dc3545; /* 赤 */
+    font-weight: 600;
+}
+
+/* アクションボタン */
+.approve-btn {
+    background-color: #28a745; /* 緑 */
+    color: white;
+}
+
+.reject-btn {
+    background-color: #dc3545; /* 赤 */
+    color: white;
+}

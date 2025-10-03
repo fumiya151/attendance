@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>勤怠管理システム - 管理画面</title>
+    <link rel="stylesheet" href="../css/admin_common.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="admin-dashboard">
+        
+        <aside class="sidebar">
+            <h1 class="logo">勤怠管理</h1>
+            <nav class="nav-menu">
+                <a href="admin_main.html" class="nav-item active" data-target="dashboard">
+                    <i class="fas fa-chart-line"></i> ダッシュボード
+                </a>
+                <a href="employee_management.html" class="nav-item" data-target="employees">
+                    <i class="fas fa-users"></i> 従業員管理
+                </a>
+                <a href="attendance_log.html" class="nav-item" data-target="attendance-logs">
+                    <i class="fas fa-clock"></i> 勤怠ログ/修正
+                </a>
+                <a href="payroll_calculation.html" class="nav-item" data-target="payroll">
+                    <i class="fas fa-calculator"></i> 給与計算・集計
+                </a>
+                <a href="system_settings.html" class="nav-item" data-target="settings">
+                    <i class="fas fa-cogs"></i> システム設定
+                </a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="header">
+                <h2>ダッシュボード</h2>
+                <div class="user-info">
+                    <span>管理者 (Admin)</span>
+                    <a href="login.html" class="logout-btn">ログアウト</a>
+                </div>
+            </header>
+
+            <section id="employees" class="content-view active">
+                <h3>従業員マスタ管理</h3>
+                <div class="action-bar">
+                    <input type="text" placeholder="氏名、コードで検索..." class="search-input">
+                    <button class="primary-btn"><i class="fas fa-plus"></i> 新規従業員登録</button>
+                    <button class="secondary-btn"><i class="fas fa-file-export"></i> CSV出力</button>
+                </div>
+                
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>コード</th>
+                            <th>氏名</th>
+                            <th>部署</th>
+                            <th>在職状況</th>
+                            <th>アクション</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>A001</td>
+                            <td>佐藤 太郎</td>
+                            <td>営業部</td>
+                            <td><span class="status-active">在職中</span></td>
+                            <td>
+                                <button class="small-btn edit-btn"><i class="fas fa-pen"></i> 編集</button>
+                                <button class="small-btn delete-btn"><i class="fas fa-trash-alt"></i> 削除</button>
+                            </td>
+                        </tr>
+                        </tbody>
+                </table>
+            </section>
+
+            <section id="payroll" class="content-view">
+                <h3>給与計算・勤務時間集計</h3>
+                <div class="card-grid">
+                    <div class="card info-card">
+                        <p class="card-title">集計対象期間</p>
+                        <select class="form-select">
+                            <option>2025年10月度</option>
+                            <option>2025年9月度</option>
+                        </select>
+                        <button class="primary-btn mt-10">集計実行</button>
+                    </div>
+                    
+                    <div class="card summary-card">
+                        <p class="card-title">全従業員の総労働時間</p>
+                        <p class="card-value">1,560 時間</p>
+                    </div>
+                    <div class="card summary-card">
+                        <p class="card-title">平均残業時間（月）</p>
+                        <p class="card-value red">18.5 時間</p>
+                    </div>
+                </div>
+
+                <h4>集計結果一覧</h4>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>氏名</th>
+                            <th>総労働時間</th>
+                            <th>残業時間</th>
+                            <th>深夜時間</th>
+                            <th>アクション</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>佐藤 太郎</td>
+                            <td>160:00</td>
+                            <td>10:00</td>
+                            <td>2:30</td>
+                            <td><button class="small-btn export-btn">明細出力</button></td>
+                        </tr>
+                        </tbody>
+                </table>
+            </section>
+            
+            <section id="attendance-logs" class="content-view">
+                <h3>勤怠ログ/修正</h3>
+                <div class="action-bar">
+                    <input type="text" placeholder="氏名、日付で検索..." class="search-input">
+                    <button class="primary-btn"><i class="fas fa-search"></i> 検索</button>
+                </div>
+                
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>日付</th>
+                            <th>氏名</th>
+                            <th>出勤時刻</th>
+                            <th>退勤時刻</th>
+                            <th>ステータス</th>
+                            <th>アクション</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>2025-10-02</td>
+                            <td>佐藤 太郎</td>
+                            <td>09:05</td>
+                            <td>18:10</td>
+                            <td><span class="status-approved">承認済</span></td>
+                            <td>
+                                <button class="small-btn edit-btn"><i class="fas fa-pen"></i> 修正依頼</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>2025-10-02</td>
+                            <td>鈴木 次郎</td>
+                            <td>08:58</td>
+                            <td>19:30</td>
+                            <td><span class="status-pending">修正依頼中</span></td>
+                            <td>
+                                <button class="small-btn approve-btn"><i class="fas fa-check"></i> 承認</button>
+                                <button class="small-btn reject-btn"><i class="fas fa-times"></i> 否認</button>
+                            </td>
+                        </tr>
+                        </tbody>
+                </table>
+            </section>
+
+            <section id="settings" class="content-view">
+                <h3>システム設定</h3>
+                <div class="card-grid">
+                    <div class="card settings-card">
+                        <p class="card-title">全般設定</p>
+                        <div class="setting-item">
+                            <label for="company-name">会社名</label>
+                            <input type="text" id="company-name" value="勤怠管理株式会社" class="form-input">
+                        </div>
+                        <div class="setting-item">
+                            <label for="default-work-hours">標準労働時間</label>
+                            <input type="number" id="default-work-hours" value="8" class="form-input"> 時間/日
+                        </div>
+                        <button class="primary-btn mt-10">保存</button>
+                    </div>
+                    <div class="card settings-card">
+                        <p class="card-title">マスターデータ管理</p>
+                        <div class="master-data-links">
+                            <a href="#" class="master-data-link">部署マスター</a>
+                            <a href="#" class="master-data-link">役職マスター</a>
+                            <a href="#" class="master-data-link">休暇種別マスター</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            </main>
+    </div>
+</body>
+</html>

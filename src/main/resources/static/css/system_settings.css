@@ -1,0 +1,69 @@
+/* system_settings.css */
+
+.settings-card {
+    /* カードの基本的なスタイルは admin_common.css から継承 */
+}
+
+.settings-card .card-title {
+    font-size: 1.1em;
+    color: #333;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+.setting-item {
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.setting-item label {
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 8px;
+}
+
+.form-input {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    width: 100%;
+    box-sizing: border-box; /* paddingを含めてwidthを100%にする */
+}
+
+.setting-item.checkbox-item {
+    flex-direction: row;
+    align-items: center;
+}
+
+.setting-item.checkbox-item input {
+    margin-right: 10px;
+}
+
+.master-data-links {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.master-data-link {
+    display: block;
+    padding: 12px 15px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    text-decoration: none;
+    color: #3498db;
+    font-weight: 600;
+    transition: background-color 0.2s;
+    border: 1px solid #eee;
+}
+
+.master-data-link:hover {
+    background-color: #e9ecef;
+}
+
+/* admin_common.css の card-grid を設定ページ用に調整 */
+.card-grid {
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+}
