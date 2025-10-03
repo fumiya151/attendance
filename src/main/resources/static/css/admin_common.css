@@ -113,13 +113,42 @@ h4 { border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 40px; }
     font-weight: 600;
 }
 .primary-btn {
+    display: inline-block;
     background-color: #3498db;
     color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 1em;
+    text-align: center;
+    text-decoration: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    transition: background 0.2s, color 0.2s;
+}
+.primary-btn:hover {
+    background-color: #217dbb;
+    color: #fff;
 }
 .secondary-btn {
+    display: inline-block;
     background-color: #f3f3f3;
     color: #555;
+    padding: 10px 20px;
     border: 1px solid #ccc;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 1em;
+    text-align: center;
+    text-decoration: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    transition: background 0.2s, color 0.2s;
+}
+.secondary-btn:hover {
+    background-color: #e0e0e0;
+    color: #333;
 }
 .small-btn {
     padding: 5px 10px;
@@ -159,6 +188,32 @@ h4 { border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 40px; }
 }
 .card {
     background-color: white;
+    .primary-btn, .secondary-btn {
+         display: inline-block;
+         padding: 10px 20px;
+         border-radius: 5px;
+         cursor: pointer;
+         font-weight: 600;
+         font-size: 1em;
+         text-align: center;
+         text-decoration: none;
+         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+         transition: background 0.2s, color 0.2s;
+         border: none;
+    }
+    .primary-btn {
+         background-color: #3498db;
+         color: white;
+    }
+    .primary-btn:hover {
+         background-color: #217dbb;
+         color: #fff;
+    }
+    .secondary-btn {
+         background-color: #f3f3f3;
+         color: #555;
+         border: 1px solid #ccc;
+    }
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);

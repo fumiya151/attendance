@@ -127,10 +127,33 @@ public class EmployeeService {
      * @return 従業員DTO
      */
     private EmployeeDto convertToDto(Employee employee) {
-        EmployeeDto dto = new EmployeeDto();
-        dto.setId(employee.getId());
-        dto.setEmployeeCode(employee.getEmployeeCode());
-        dto.setName(employee.getName());
-        return dto;
+    EmployeeDto dto = new EmployeeDto();
+    dto.setId(employee.getId());
+    dto.setEmployeeCode(employee.getEmployeeCode());
+    dto.setName(employee.getName());
+    dto.setDepartment(employee.getDepartment());
+    dto.setEmail(employee.getEmail());
+    dto.setActive(employee.isActive());
+    return dto;
+    }
+
+    /**
+     * 従業員情報を登録するメソッドです.
+     *
+     * 【機能】
+     * 新規従業員情報をDBに保存します。
+     *
+     *【注意事項】
+     * パスワードはハッシュ化して保存されます。
+     *
+     * @param employee 従業員エンティティ
+     */
+    public void registerEmployee(Employee employee) {
+        if (employee.getPassword() != null && !employee.getPassword().isEmpty()) {
+            String hashed = BCrypt.hashpw(employee.getPassword(), BCrypt.gensalt());
+            employee.setPassword(hashed);
+        }
+        employee.setHireDate(java.time.LocalDate.now());
+        employeeRepository.save(employee);
     }
 }

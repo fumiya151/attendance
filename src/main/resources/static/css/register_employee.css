@@ -1,0 +1,52 @@
+.register-employee-bg {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: #f4f6f9;
+}
+.register-employee-card {
+    width: 420px;
+    padding: 32px 32px 24px 32px;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(52,152,219,0.10);
+}
+.register-employee-title {
+    color: #3498db;
+    text-align: center;
+    font-size: 2em;
+    font-weight: 700;
+    margin-bottom: 24px;
+    letter-spacing: 1px;
+}
+.register-employee-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+.register-employee-form label {
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 6px;
+}
+.register-employee-back {
+    text-align: center;
+    margin-top: 24px;
+}
+
+.input-info {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    width: 300px;
+    margin: 0 auto;
+    display: block;
+}
+.input-label {
+    font-weight: 600;
+    color: #555;
+    text-align: left;
+    width: 300px;
+    margin: 0 auto;
+    display: block;
+}

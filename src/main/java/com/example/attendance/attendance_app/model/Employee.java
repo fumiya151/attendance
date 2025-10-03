@@ -27,6 +27,9 @@ public class Employee {
     @Column(name = "name", nullable = false)
     private String name; // 氏名
 
+    @Column(name = "email", unique = true, nullable = false, length = 150)
+    private String email; // メールアドレス (ユニーク必須)
+
     @Column(name = "department")
     private String department; // 部署名
 

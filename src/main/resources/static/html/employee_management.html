@@ -44,7 +44,7 @@
                 <h3>従業員マスタ管理</h3>
                 <div class="action-bar">
                     <input type="text" placeholder="氏名、コードで検索..." class="search-input">
-                    <button class="primary-btn"><i class="fas fa-plus"></i> 新規従業員登録</button>
+                    <a href="register_employee.html" class="primary-btn"><i class="fas fa-plus"></i> 新規従業員登録</a>
                     <button class="secondary-btn"><i class="fas fa-file-export"></i> CSV出力</button>
                 </div>
                 
@@ -53,26 +53,37 @@
                         <tr>
                             <th>コード</th>
                             <th>氏名</th>
-                            <th>部署</th>
+                            <th>役職</th>
                             <th>在職状況</th>
                             <th>アクション</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td>A001</td>
-                            <td>佐藤 太郎</td>
-                            <td>営業部</td>
-                            <td><span class="status-active">在職中</span></td>
-                            <td>
-                                <button class="small-btn edit-btn"><i class="fas fa-pen"></i> 編集</button>
-                                <button class="small-btn delete-btn"><i class="fas fa-trash-alt"></i> 削除</button>
-                            </td>
-                        </tr>
+                        <!-- ↓ここにJSで従業員一覧を追加 -->
+                        <tr id="employee-insert-point"></tr>
                         </tbody>
                 </table>
+                <!-- 従業員登録モーダル -->
+                <div id="register-modal" class="modal" style="display:none;">
+                    <div class="modal-content">
+                        <span class="close" id="close-register-modal">&times;</span>
+                        <h3>新規従業員登録</h3>
+                        <form id="employee-register-form">
+                            <label for="employeeCode">コード</label>
+                            <input type="text" id="employeeCode" name="employeeCode" required>
+                            <label for="employeeName">氏名</label>
+                            <input type="text" id="employeeName" name="employeeName" required>
+                            <label for="department">部署</label>
+                            <input type="text" id="department" name="department" required>
+                            <label for="password">パスワード</label>
+                            <input type="password" id="password" name="password" required>
+                            <button type="submit" class="primary-btn">登録</button>
+                        </form>
+                    </div>
+                </div>
             </section>
         </main>
     </div>
+<script src="../js/employee_management.js"></script>
 </body>
 </html>

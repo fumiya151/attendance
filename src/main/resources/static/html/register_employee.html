@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新規従業員登録</title>
+    <link rel="stylesheet" href="../css/admin_common.css">
+    <link rel="stylesheet" href="../css/register_employee.css">
+</head>
+<body>
+    <div class="register-employee-bg">
+        <div class="register-employee-card">
+            <h2 class="register-employee-title">新規従業員登録</h2>
+            <form id="employee-register-form" class="register-employee-form">
+                <label for="employeeCode" class="input-label">ID</label>
+                <input type="text" id="employeeCode" name="employeeCode" class="input-info" required>
+                <label for="employeeName" class="input-label">氏名</label>
+                <input type="text" id="employeeName" name="employeeName" class="input-info" required>
+                <label for="department" class="input-label">役職</label>
+                <input type="text" id="department" name="department" class="input-info" required>
+                <label for="email" class="input-label">メールアドレス</label>
+                <input type="email" id="email" name="email" class="input-info" required>
+                <label for="password" class="input-label">パスワード</label>
+                <input type="password" id="password" name="password" class="input-info" required>
+                <button type="submit" class="primary-btn">登録</button>
+            </form>
+            <div class="register-employee-back">
+                <a href="employee_management.html" class="secondary-btn">一覧に戻る</a>
+            </div>
+        </div>
+    </div>
+    <script src="../js/register_employee.js"></script>
+</body>
+</html>

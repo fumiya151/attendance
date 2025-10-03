@@ -7,4 +7,7 @@ public class EmployeeDto {
     private Long id;
     private String employeeCode;
     private String name;
+    private String email;
+    private String department;
+    private boolean active;
 }
