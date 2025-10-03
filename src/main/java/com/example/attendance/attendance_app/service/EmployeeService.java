@@ -9,28 +9,123 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import org.springframework.security.crypto.bcrypt.BCrypt;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import java.util.Date;
+import io.jsonwebtoken.security.Keys;
 
 @Service
 @RequiredArgsConstructor
 public class EmployeeService {
 
     private final EmployeeRepository employeeRepository;
+    // HS512用の安全なキー（512bit以上）
+    private final byte[] jwtSecretBytes = "yourSuperLongSecretKeyForHS512AlgorithmMustBeAtLeast64BytesLong0123456789".getBytes();
+    private final long jwtExpirationMs = 3600000; // 1時間
 
+    /**
+     * 従業員一覧を取得するメソッドです.
+     *
+     * 【機能】
+     * 従業員情報を全件取得し、DTOリストで返します。
+     *
+     *【注意事項】
+     * 特になし
+     *
+     * @return 従業員DTOリスト
+     */
     public List<EmployeeDto> getEmployees() {
         return employeeRepository.findAll().stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
 
+    // パスワードハッシュ化による認証
+    /**
+     * ログイン認証を行うメソッドです.
+     *
+     * 【機能】
+     * 従業員コードとパスワードで認証を行います。
+     *
+     *【注意事項】
+     * パスワードはハッシュ化されている必要があります。
+     *
+     * @param employeeCode 従業員コード
+     * @param password パスワード
+     * @return 認証結果（true:成功, false:失敗）
+     */
     public boolean login(String employeeCode, String password) {
         Optional<Employee> employeeOptional = employeeRepository.findByEmployeeCode(employeeCode);
         if (employeeOptional.isPresent()) {
             Employee employee = employeeOptional.get();
-            return password.equals(employee.getPassword());
+            String hashedPassword = employee.getPassword();
+            return BCrypt.checkpw(password, hashedPassword);
         }
         return false;
     }
 
+    // 認証成功時にJWTトークンを返す
+    /**
+     * ログイン認証とJWTトークン発行を行うメソッドです.
+     *
+     * 【機能】
+     * 認証成功時にJWTトークンを返します。
+     *
+     *【注意事項】
+     * パスワードはハッシュ化されている必要があります。
+     *
+     * @param employeeCode 従業員コード
+     * @param password パスワード
+     * @return JWTトークン（認証失敗時はnull）
+     */
+    public String loginAndGenerateToken(String employeeCode, String password) {
+        Optional<Employee> employeeOptional = employeeRepository.findByEmployeeCode(employeeCode);
+        if (employeeOptional.isPresent()) {
+            Employee employee = employeeOptional.get();
+            String hashedPassword = employee.getPassword();
+            if (BCrypt.checkpw(password, hashedPassword)) {
+                return generateJwtToken(employee);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * JWTトークンを生成するメソッドです.
+     *
+     * 【機能】
+     * 従業員情報からJWTトークンを生成します。
+     *
+     *【注意事項】
+     * HS512用の安全なキーが必要です。
+     *
+     * @param employee 従業員エンティティ
+     * @return JWTトークン文字列
+     */
+    private String generateJwtToken(Employee employee) {
+        // HS512用の安全なキー生成
+        javax.crypto.SecretKey key = Keys.hmacShaKeyFor(jwtSecretBytes);
+        return Jwts.builder()
+                .setSubject(employee.getEmployeeCode())
+                .setIssuedAt(new Date())
+                .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs))
+                .signWith(key, SignatureAlgorithm.HS512)
+                .compact();
+    }
+
+    /**
+     * EmployeeエンティティをDTOに変換するメソッドです.
+     *
+     * 【機能】
+     * エンティティの各項目をDTOにセットします。
+     *
+     *【注意事項】
+     * 特になし
+     *
+     * @param employee 従業員エンティティ
+     * @return 従業員DTO
+     */
     private EmployeeDto convertToDto(Employee employee) {
         EmployeeDto dto = new EmployeeDto();
         dto.setId(employee.getId());

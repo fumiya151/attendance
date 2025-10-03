@@ -21,6 +21,18 @@ public class AttendanceService {
     private final EmployeeRepository employeeRepository;
 
     @Transactional
+    /**
+     * 勤怠記録を登録するメソッドです.
+     *
+     * 【機能】
+     * 勤怠リクエストを受け取り、勤怠情報を登録します。
+     *
+     *【注意事項】
+     * リクエストのバリデーションを行います。
+     *
+     * @param request 勤怠リクエスト
+     * @return 登録された勤怠エンティティ
+     */
     public Attendance recordAttendance(AttendanceRequest request) {
         Employee employee = employeeRepository.findById(request.getEmployeeId())
                 .orElseThrow(() -> new RuntimeException("Employee not found with id: " + request.getEmployeeId()));
@@ -36,6 +48,17 @@ public class AttendanceService {
         return attendanceRepository.save(attendance);
     }
 
+    /**
+     * 勤怠リクエストのバリデーションを行うメソッドです.
+     *
+     * 【機能】
+     * 勤怠リクエストの内容をチェックします。
+     *
+     *【注意事項】
+     * 不正な場合は例外を投げます。
+     *
+     * @param request 勤怠リクエスト
+     */
     private void validateAttendanceRequest(AttendanceRequest request) {
         Optional<AttendanceDto> latestAttendanceOpt = getLatestAttendance(request.getEmployeeId());
         String newStampType = request.getAttendanceType();
@@ -76,6 +99,18 @@ public class AttendanceService {
         }
     }
 
+    /**
+     * 最新の勤怠情報を取得するメソッドです.
+     *
+     * 【機能】
+     * 指定従業員の最新勤怠情報を返します。
+     *
+     *【注意事項】
+     * 該当データがない場合は空を返します。
+     *
+     * @param employeeId 従業員ID
+     * @return 最新勤怠DTO（Optional）
+     */
     public Optional<AttendanceDto> getLatestAttendance(Long employeeId) {
         OffsetDateTime now = OffsetDateTime.now();
         OffsetDateTime startOfDay = now.toLocalDate().atStartOfDay(now.getOffset()).toOffsetDateTime();
@@ -83,6 +118,18 @@ public class AttendanceService {
                 .map(this::convertToDto);
     }
 
+    /**
+     * 勤怠エンティティをDTOに変換するメソッドです.
+     *
+     * 【機能】
+     * エンティティの各項目をDTOにセットします。
+     *
+     *【注意事項】
+     * 特になし
+     *
+     * @param attendance 勤怠エンティティ
+     * @return 勤怠DTO
+     */
     private AttendanceDto convertToDto(Attendance attendance) {
         AttendanceDto dto = new AttendanceDto();
         dto.setId(attendance.getId());
