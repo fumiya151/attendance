@@ -2,6 +2,14 @@
 const form = document.getElementById('employee-register-form');
 form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    // パスワード一致チェック
+    if (form.password.value !== form.passwordConfirm.value) {
+        alert('パスワードが一致しません');
+        form.password.value = '';
+        form.passwordConfirm.value = '';
+        form.password.focus();
+        return;
+    }
     const data = {
         employeeCode: form.employeeCode.value,
         name: form.employeeName.value,

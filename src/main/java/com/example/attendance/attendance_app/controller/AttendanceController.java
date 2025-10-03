@@ -45,6 +45,7 @@ public class AttendanceController {
 
         return ResponseEntity.ok(message);
     }
+    
     /**
      * 最新勤怠取得APIのエンドポイントです.
      *

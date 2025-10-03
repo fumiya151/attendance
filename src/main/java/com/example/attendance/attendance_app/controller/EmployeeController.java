@@ -33,7 +33,6 @@ public class EmployeeController {
         employeeService.registerEmployee(employee);
         return "登録しました";
     }
-
     /**
      * 従業員一覧取得APIのエンドポイントです.
      *
@@ -46,7 +45,60 @@ public class EmployeeController {
      * @return 従業員DTOリスト
      */
     @GetMapping
-    public List<EmployeeDto> getEmployees() {
-        return employeeService.getEmployees();
+    public List<EmployeeDto> getEmployees(
+            @RequestParam(required = false) String keyword) {
+        return employeeService.searchEmployees(keyword, Integer.MAX_VALUE);
+    }
+
+    /**
+    * 従業員編集APIのエンドポイントです.
+    *
+    * 【機能】
+    * 指定IDの従業員情報を更新します。
+    *
+    *【注意事項】
+    * 特になし
+    *
+    * @param id 従業員ID
+    * @param dto 更新内容（DTO）
+    * @return 更新後の従業員DTO
+     */
+    @PutMapping("/{id}")
+    public EmployeeDto updateEmployee(@PathVariable Long id, @RequestBody EmployeeDto dto) {
+        return employeeService.updateEmployee(id, dto);
+    }
+
+    /**
+     * 従業員一覧取得API（3件制限）
+     *
+     * 【機能】
+     * 従業員情報を最大3件まで取得し返却します。
+     *
+     *【注意事項】
+     * 特になし
+     *
+     * @return 従業員DTOリスト
+     */
+    @GetMapping("/limited")
+    public List<EmployeeDto> getEmployeesLimited(
+            @RequestParam(required = false) String keyword) {
+        return employeeService.searchEmployees(keyword, 3);
+    }
+
+    /**
+     * 従業員一覧取得API（全件表示）
+     *
+     * 【機能】
+     * 従業員情報を全件取得し返却します。
+     *
+     *【注意事項】
+     * 特になし
+     *
+     * @return 従業員DTOリスト
+     */
+    @GetMapping("/employeesManagement")
+    public List<EmployeeDto> getEmployeesManagement(
+            @RequestParam(required = false) String keyword) {
+        return employeeService.searchEmployees(keyword, Integer.MAX_VALUE);
     }
 }
