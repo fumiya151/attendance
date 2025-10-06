@@ -1,7 +1,7 @@
 // 従業員一覧取得＆テーブル描画
 async function fetchAndRenderEmployees() {
     try {
-    const res = await fetch('/api/employees');
+        const res = await fetch('/api/employees');
         if (!res.ok) throw new Error('取得失敗');
         const employees = await res.json();
         renderEmployeeRows(employees);
@@ -26,38 +26,8 @@ function renderEmployeeRows(list) {
                 <button class="small-btn delete-btn"><i class="fas fa-trash-alt"></i> 削除</button>
             </td>
         `;
-        // 編集ボタン
-        tr.querySelector('.edit-btn').addEventListener('click', async () => {
-            // 氏名・部署・在職状況を編集できる簡易ダイアログ例
-            const newName = prompt('新しい氏名を入力', emp.name);
-            const newDept = prompt('新しい部署を入力', emp.department);
-            const newActive = confirm('在職中ですか？（OK:在職中, キャンセル:退職）');
-            if (newName && newDept) {
-                // EmployeeDto形式で送信
-                const dto = {
-                    id: emp.id,
-                    employeeCode: emp.employeeCode,
-                    name: newName,
-                    department: newDept,
-                    email: emp.email || '',
-                    active: newActive
-                };
-                try {
-                    const res = await fetch(`/api/employees/${emp.id}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(dto)
-                    });
-                    if (res.ok) {
-                        alert('編集しました');
-                        fetchAndRenderEmployees();
-                    } else {
-                        alert('編集失敗');
-                    }
-                } catch {
-                    alert('通信エラー');
-                }
-            }
+        tr.querySelector('.edit-btn').addEventListener('click', () => {
+            window.location.href = `/html/edit_employee.html?id=${emp.id}`;
         });
         // 削除ボタン
         tr.querySelector('.delete-btn').addEventListener('click', async () => {

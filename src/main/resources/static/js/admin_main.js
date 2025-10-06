@@ -1,7 +1,7 @@
 // 従業員一覧取得＆テーブル描画
 async function fetchAndRenderEmployees() {
     try {
-        const res = await fetch('/api/employees?limit=3');
+        const res = await fetch('/api/employees/limited');
         if (!res.ok) throw new Error('取得失敗');
         const employees = await res.json();
         renderEmployeeRows(employees);
@@ -22,6 +22,7 @@ function renderEmployeeRows(list) {
     list.forEach(emp => {
         const tr = document.createElement('tr');
         tr.id = 'employee-row';
+        tr.dataset.id = emp.id; // 従業員IDをdata属性として保持
         tr.innerHTML = `
             <td>${emp.employeeCode}</td>
             <td>${emp.name}</td>
@@ -36,9 +37,11 @@ function renderEmployeeRows(list) {
     });
 }
 
-// 検索イベント
 document.addEventListener('DOMContentLoaded', () => {
+    // 初期表示
     fetchAndRenderEmployees();
+
+    // 検索イベント
     const searchBtn = document.getElementById('employee-search-btn');
     const searchInput = document.getElementById('employee-search-input');
     if (searchBtn && searchInput) {
@@ -57,8 +60,43 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.key === 'Enter') searchBtn.click();
         });
     }
-});
 
-// 初期表示
-window.addEventListener('DOMContentLoaded', fetchAndRenderEmployees);
-// ...existing code...
+    // 編集・削除ボタンのイベントリスナー（イベント委譲）
+    const tbody = document.querySelector('#employees .data-table tbody');
+    if (tbody) {
+        tbody.addEventListener('click', async (event) => {
+            const target = event.target;
+            // Element.closest() を使って、クリックされた要素がボタンまたはその子要素であるかを確認
+            const editBtn = target.closest('.edit-btn');
+            const deleteBtn = target.closest('.delete-btn');
+
+            if (editBtn) {
+                const tr = editBtn.closest('tr');
+                const employeeId = tr.dataset.id;
+                // 編集ページへ遷移
+                window.location.href = `edit_employee.html?id=${employeeId}`;
+            }
+
+            if (deleteBtn) {
+                const tr = deleteBtn.closest('tr');
+                const employeeId = tr.dataset.id;
+                const employeeCode = tr.cells[0].textContent;
+                if (confirm(`従業員コード: ${employeeCode} の従業員情報を本当に削除しますか？`)) {
+                    try {
+                        const res = await fetch(`/api/employees/${employeeId}`, {
+                            method: 'DELETE',
+                        });
+                        if (res.ok) {
+                            alert('従業員情報を削除しました。');
+                            fetchAndRenderEmployees(); // テーブルから行を削除
+                        } else {
+                            throw new Error('削除に失敗しました。');
+                        }
+                    } catch (err) {
+                        alert(err.message);
+                    }
+                }
+            }
+        });
+    }
+});

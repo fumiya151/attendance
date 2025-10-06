@@ -42,4 +42,7 @@ public class Employee {
     // パスワードは後でSpring Securityで暗号化して保存します
     @Column(name = "password") 
     private String password;
+
+    @Column(name = "hourly_wage")
+    private Integer hourlyWage; // 時給
 }

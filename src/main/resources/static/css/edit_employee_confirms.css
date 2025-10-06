@@ -1,0 +1,30 @@
+.confirmation-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.confirmation-table th,
+.confirmation-table td {
+    border: 1px solid #ddd;
+    padding: 12px;
+    text-align: left;
+}
+
+.confirmation-table th {
+    background-color: #f8f9fa;
+    width: 20%;
+}
+
+.confirmation-table td {
+    width: 40%;
+}
+
+.diff-removed {
+    background-color: #fde0e0;
+    text-decoration: line-through;
+}
+
+.diff-added {
+    background-color: #e0fde0;
+}

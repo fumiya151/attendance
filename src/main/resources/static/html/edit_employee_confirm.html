@@ -4,27 +4,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>勤怠管理システム - 給与計算・集計</title>
+    <title>勤怠管理システム - 編集内容の確認</title>
     <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/edit_employee_confirms.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 
 <body>
     <div class="admin-dashboard">
-
         <aside class="sidebar">
             <h1 class="logo">勤怠管理</h1>
             <nav class="nav-menu">
                 <a href="admin_main.html" class="nav-item" data-target="dashboard">
                     <i class="fas fa-chart-line"></i> ダッシュボード
                 </a>
-                <a href="employee_management.html" class="nav-item" data-target="employees">
+                <a href="employee_management.html" class="nav-item active" data-target="employees">
                     <i class="fas fa-users"></i> 従業員管理
                 </a>
                 <a href="attendance_log.html" class="nav-item" data-target="attendance-logs">
                     <i class="fas fa-clock"></i> 勤怠ログ/修正
                 </a>
-                <a href="payroll_calculation.html" class="nav-item active" data-target="payroll">
+                <a href="payroll_calculation.html" class="nav-item" data-target="payroll">
                     <i class="fas fa-calculator"></i> 給与計算・集計
                 </a>
                 <a href="system_settings.html" class="nav-item" data-target="settings">
@@ -35,38 +35,33 @@
 
         <main class="main-content">
             <header class="header">
-                <h2>給与計算・集計</h2>
-                <div class="user-info">
-                    <span>管理者 (Admin)</span>
-                    <a href="login.html" class="logout-btn">ログアウト</a>
-                </div>
+                <h2>編集内容の確認</h2>
             </header>
 
-            <section id="payroll" class="content-view active">
-                <h3>給与計算・勤務時間集計</h3>
-                <div class="action-bar">
-                     <button id="calculate-btn" class="primary-btn"><i class="fas fa-sync-alt"></i> 給与計算を再実行</button>
-                </div>
+            <section class="content-view active">
+                <h3>以下の内容で更新します。よろしいですか？</h3>
 
-                <h4>集計結果一覧</h4>
-                <table class="data-table">
+                <table class="confirmation-table">
                     <thead>
                         <tr>
-                            <th>従業員ID</th>
-                            <th>氏名</th>
-                            <th>合計労働時間 (h)</th>
-                            <th>計算給与 (円)</th>
+                            <th>項目</th>
+                            <th>変更前</th>
+                            <th>変更後</th>
                         </tr>
                     </thead>
-                    <tbody id="payroll-table-body">
-                        <!-- データはJavaScriptによってここに挿入されます -->
+                    <tbody id="confirmation-tbody">
+                        <!-- JSで内容をここに挿入 -->
                     </tbody>
                 </table>
-            </section>
 
+                <div class="form-actions">
+                    <button id="confirm-btn" class="primary-btn">確定</button>
+                    <button id="back-btn" class="secondary-btn">修正に戻る</button>
+                </div>
+            </section>
         </main>
     </div>
-    <script src="../js/payroll_calculation.js"></script>
+    <script src="../js/edit_employee_confirm.js"></script>
 </body>
 
 </html>

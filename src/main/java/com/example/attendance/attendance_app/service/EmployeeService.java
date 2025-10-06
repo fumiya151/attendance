@@ -120,9 +120,20 @@ public class EmployeeService {
         emp.setDepartment(dto.getDepartment());
         emp.setEmployeeCode(dto.getEmployeeCode());
         emp.setActive(dto.isActive());
-        // 必要に応じて他フィールドも更新
+        emp.setEmail(dto.getEmail());
         employeeRepository.save(emp);
         return convertToDto(emp);
+    }
+
+    /**
+     * 従業員をIDで取得するメソッドです.
+     *
+     * @param id 従業員ID
+     * @return 従業員DTO
+     */
+    public EmployeeDto getEmployeeById(Long id) {
+        Employee employee = employeeRepository.findById(id).orElseThrow(() -> new RuntimeException("従業員が見つかりません"));
+        return convertToDto(employee);
     }
 
     /**
