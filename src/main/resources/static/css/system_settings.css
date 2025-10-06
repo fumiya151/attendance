@@ -1,7 +1,7 @@
 /* system_settings.css */
 
 .settings-card {
-    /* カードの基本的なスタイルは admin_common.css から継承 */
+    /* カードの基本的なスタイルは common.css から継承 */
 }
 
 .settings-card .card-title {
@@ -29,7 +29,8 @@
     border: 1px solid #ccc;
     border-radius: 5px;
     width: 100%;
-    box-sizing: border-box; /* paddingを含めてwidthを100%にする */
+    box-sizing: border-box;
+    /* paddingを含めてwidthを100%にする */
 }
 
 .setting-item.checkbox-item {
@@ -63,7 +64,7 @@
     background-color: #e9ecef;
 }
 
-/* admin_common.css の card-grid を設定ページ用に調整 */
+/* common.css の card-grid を設定ページ用に調整 */
 .card-grid {
     grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
 }

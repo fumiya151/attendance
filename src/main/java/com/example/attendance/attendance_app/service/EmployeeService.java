@@ -5,9 +5,7 @@ import com.example.attendance.attendance_app.model.Employee;
 import com.example.attendance.attendance_app.repository.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 
