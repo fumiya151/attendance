@@ -13,21 +13,27 @@ body {
 
 .app-container {
     width: 90%;
-    max-width: 1100px; /* 横幅を広げてリストと打刻エリアを配置 */
-    height: 80vh; /* 高さを固定 (タブレット利用を想定) */
-    display: flex; /* Flexboxで左右分割 */
+    max-width: 1100px;
+    /* 横幅を広げてリストと打刻エリアを配置 */
+    min-height: 80vh;
+    /* 高さを最低80vhにし、可変に */
+    display: flex;
+    /* Flexboxで左右分割 */
     background-color: #ffffff;
     border-radius: 20px;
     box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1);
-    overflow: hidden; /* 角丸に合わせて内容をクリップ */
+    overflow: hidden;
+    /* 角丸に合わせて内容をクリップ */
 }
 
 /* ---------------------------------- */
 /* 左サイド：従業員リストパネル */
 /* ---------------------------------- */
 .employee-list-panel {
-    width: 35%; /* 35%の幅 */
-    background-color: #f8f9fa; /* リストエリアの背景色 */
+    width: 35%;
+    /* 35%の幅 */
+    background-color: #f8f9fa;
+    /* リストエリアの背景色 */
     padding: 30px 0;
     border-right: 1px solid #e0e0e0;
     display: flex;
@@ -43,7 +49,8 @@ body {
 
 .employee-list {
     flex-grow: 1;
-    overflow-y: auto; /* リストが長い場合にスクロール可能に */
+    overflow-y: auto;
+    /* リストが長い場合にスクロール可能に */
 }
 
 .employee-item {
@@ -61,7 +68,8 @@ body {
 }
 
 .employee-item.is-selected {
-    background-color: #3498db; /* 選択時の色 */
+    background-color: #3498db;
+    /* 選択時の色 */
     color: white;
     font-weight: 700;
 }
@@ -70,11 +78,14 @@ body {
 /* 右サイド：打刻パネル */
 /* ---------------------------------- */
 .stamp-panel {
-    width: 65%; /* 65%の幅 */
+    min-height: 400px;
+    width: 65%;
+    /* 65%の幅 */
     padding: 40px;
     display: flex;
     flex-direction: column;
-    justify-content: space-between; /* 要素を上下に広げる */
+    justify-content: space-between;
+    /* 要素を上下に広げる */
     text-align: center;
 }
 
@@ -84,7 +95,8 @@ body {
 }
 
 .time-main {
-    font-size: 5em; /* リストとのバランスで少し小さく */
+    font-size: 5em;
+    /* リストとのバランスで少し小さく */
     font-weight: 700;
     color: #34495e;
     line-height: 1.1;
@@ -108,20 +120,22 @@ body {
 .selected-user-info .prompt {
     font-size: 1.2em;
     color: #7f8c8d;
-    display: block; /* 常に表示 */
+    display: block;
+    /* 常に表示 */
 }
 
 .selected-user-info .name-display {
     font-size: 2.5em;
     font-weight: bold;
-    color: #e67e22; /* ハイライトカラー */
+    color: #e67e22;
+    /* ハイライトカラー */
     display: block;
 }
 
 /* 打刻ボタンエリア (前回のデザインを流用) */
 .stamp-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr; 
+    grid-template-columns: 1fr 1fr;
     gap: 15px;
     margin-bottom: 30px;
 }
@@ -156,17 +170,38 @@ body {
     transform: scale(0.98);
 }
 
-.is-in { background-color: #2ecc71; }
-.is-in:hover { background-color: #27ae60; }
+.is-in {
+    background-color: #2ecc71;
+}
 
-.is-out { background-color: #e74c3c; }
-.is-out:hover { background-color: #c0392b; }
+.is-in:hover {
+    background-color: #27ae60;
+}
 
-.is-break-start { background-color: #f1c40f; color: #333;}
-.is-break-start:hover { background-color: #f39c12; }
+.is-out {
+    background-color: #e74c3c;
+}
 
-.is-break-end { background-color: #9b59b6; }
-.is-break-end:hover { background-color: #8e44ad; }
+.is-out:hover {
+    background-color: #c0392b;
+}
+
+.is-break-start {
+    background-color: #f1c40f;
+    color: #333;
+}
+
+.is-break-start:hover {
+    background-color: #f39c12;
+}
+
+.is-break-end {
+    background-color: #9b59b6;
+}
+
+.is-break-end:hover {
+    background-color: #8e44ad;
+}
 
 /* メッセージ表示エリア (前回のデザインを流用) */
 .message-box {
@@ -174,7 +209,8 @@ body {
     border-radius: 12px;
     font-size: 1.1em;
     min-height: 20px;
-    color: #7f8c8d;
+    color: #34495e;
+    font-weight: bold;
     background-color: #ecf0f1;
 }
 

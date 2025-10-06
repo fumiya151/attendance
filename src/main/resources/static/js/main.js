@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             const employees = await response.json();
-            
+
             const listElement = document.getElementById('employee-list');
             listElement.innerHTML = ''; // Clear existing list
             employees.forEach(emp => {
@@ -59,45 +59,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            const response = await fetch(`/api/attendance/latest/${employeeId}`);
+            const response = await fetch(`/api/attendance/next-available/${employeeId}`);
             if (response.ok) {
-                const latestAttendance = await response.json();
-                const lastStampType = latestAttendance.stampType;
-
-                if (lastStampType === '出勤') {
-                    buttons['出勤'].disabled = true;
-                } else if (lastStampType === '退勤') {
-                    // 1日の終わりなので、出勤以外はすべて非活性
-                    buttons['退勤'].disabled = true;
-                    buttons['休憩開始'].disabled = true;
-                    buttons['休憩終了'].disabled = true;
-                } else if (lastStampType === '休憩開始') {
-                    buttons['出勤'].disabled = true;
-                    buttons['休憩開始'].disabled = true;
-                } else if (lastStampType === '休憩終了') {
-                    buttons['出勤'].disabled = true;
-                    buttons['休憩終了'].disabled = true;
-                }
-            } else if (response.status === 404) {
-                // まだ打刻がない従業員
-                buttons['退勤'].disabled = true;
-                buttons['休憩開始'].disabled = true;
-                buttons['休憩終了'].disabled = true;
+                const availableTypes = await response.json();
+                // すべて一旦無効化
+                Object.values(buttons).forEach(btn => btn.disabled = true);
+                // 有効な打刻種別のみ有効化
+                availableTypes.forEach(type => {
+                    if (buttons[type]) buttons[type].disabled = false;
+                });
+            } else {
+                // エラー時はすべて無効化
+                Object.values(buttons).forEach(btn => btn.disabled = true);
             }
         } catch (error) {
-            console.error('Error fetching latest attendance:', error);
-            // エラー時は念のためすべて無効化
+            console.error('Error fetching next available stamp types:', error);
             Object.values(buttons).forEach(btn => btn.disabled = true);
         }
     }
-    
+
     // 従業員選択時の処理
-    window.selectEmployee = function(id, name, code, element) {
+    window.selectEmployee = function (id, name, code, element) {
         selectedUserId = id;
         selectedUserName = name;
         selectedUserCode = code;
         document.getElementById('selected-name').textContent = name;
-        
+
         // 選択状態のハイライト
         document.querySelectorAll('.employee-item').forEach(item => {
             item.classList.remove('is-selected');
@@ -112,9 +99,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 打刻処理
-    window.stamp = async function(type) {
+    window.stamp = async function (type) {
         const messageArea = document.getElementById('message-area');
-        
+
         if (selectedUserId === null) {
             messageArea.textContent = '⚠️ まずリストから自分の名前を選択してください！';
             messageArea.className = 'message-box is-error';
