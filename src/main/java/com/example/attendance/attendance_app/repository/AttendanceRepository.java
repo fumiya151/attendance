@@ -13,26 +13,19 @@ import java.util.Optional;
 @Repository
 public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
 
-        /**
-         * 【打刻ボタン判定用】本日中の最新打刻を1件取得します。
-         * 
-         * @param employeeId 従業員ID (String)
-         */
+        // 既存のメソッド（打刻ボタン判定用）
         Optional<Attendance> findTopByEmployeeEmployeeIdAndStampTimeBetweenOrderByStampTimeDesc(String employeeId,
                         OffsetDateTime start, OffsetDateTime end);
 
-        /**
-         * 【全ログ検索用】指定従業員の全期間の勤怠ログを取得します。
-         * 
-         * @param employeeId 従業員ID (String)
-         */
+        // 既存のメソッド（全ログ検索用）
         List<Attendance> findByEmployeeEmployeeId(String employeeId);
 
-        /**
-         * 【給与計算用】指定された期間内の全ての勤怠ログを取得するメソッド。
-         */
+        // 既存のメソッド（給与計算用）
         @Query("SELECT a FROM Attendance a WHERE a.stampTime >= :startDateTime AND a.stampTime < :endDateTime")
         List<Attendance> findByPeriod(
                         @Param("startDateTime") OffsetDateTime startDateTime,
                         @Param("endDateTime") OffsetDateTime endDateTime);
+
+        // 【新規追加】全件の勤怠ログを打刻日時の降順（最新順）にソートして取得
+        List<Attendance> findAllByOrderByStampTimeDesc();
 }

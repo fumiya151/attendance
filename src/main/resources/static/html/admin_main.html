@@ -62,7 +62,6 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <!-- ↓ここにJSで従業員一覧を追加 -->
                         <tr id="employee-insert-point"></tr>
                     </tbody>
                 </table>
@@ -73,11 +72,9 @@
                 <div class="card-grid">
                     <div class="card info-card">
                         <p class="card-title">集計対象期間</p>
-                        <select class="form-select">
-                            <option>2025年10月度</option>
-                            <option>2025年9月度</option>
+                        <select class="form-select" id="aggregation-period-select">
                         </select>
-                        <button class="primary-btn mt-10">集計実行</button>
+                        <button class="primary-btn mt-10" id="execute-aggregation-btn">集計実行</button>
                     </div>
 
                     <div class="card summary-card">

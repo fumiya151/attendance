@@ -30,8 +30,8 @@ public class LoginService {
      * 【注意事項】
      * パスワードはハッシュ化されている必要があります。
      *
-     * @param employeeCode 従業員コード
-     * @param password     パスワード
+     * @param employeeId 従業員コード
+     * @param password   パスワード
      * @return JWTトークン（認証失敗時はnull）
      */
     public String loginAndGenerateToken(String employeeId, String password) {

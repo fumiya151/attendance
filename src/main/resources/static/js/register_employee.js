@@ -11,7 +11,7 @@ form.addEventListener('submit', async (e) => {
         return;
     }
     const data = {
-        employeeCode: form.employeeCode.value,
+        employeeId: form.employeeId.value,
         name: form.employeeName.value,
         department: form.department.value,
         email: form.email.value,

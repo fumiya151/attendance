@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -110,12 +111,10 @@ public class AttendanceService {
         OffsetDateTime now = OffsetDateTime.now(JST_ZONE);
 
         // 今日の日付の開始時刻（00:00:00 JST）をOffsetDateTimeとして取得
-        // この startOfDay が、本日中の打刻のみに絞り込むための鍵となる
         OffsetDateTime startOfDay = now.toLocalDate().atStartOfDay(JST_ZONE).toOffsetDateTime();
 
         // Repository のメソッド名が
         // findTopByEmployeeEmployeeIdAndStampTimeBetweenOrderByStampTimeDesc であることを前提
-        // このクエリが正しく startOfDay と now で絞り込めているか、SQLログで確認が必要です。
         return attendanceRepository
                 .findTopByEmployeeEmployeeIdAndStampTimeBetweenOrderByStampTimeDesc(employeeId, startOfDay, now)
                 .map(this::convertToDto);
@@ -140,5 +139,19 @@ public class AttendanceService {
         dto.setStampType(attendance.getStampType());
         dto.setNote(attendance.getNote());
         return dto;
+    }
+
+    /**
+     * 全ての勤怠ログを取得するメソッドです。
+     *
+     * 【機能】
+     * データベースに存在する全ての勤怠記録を、打刻日時の新しい順（降順）にソートし、DTOリストとして返却します。
+     *
+     * @return 全勤怠DTOリスト
+     */
+    public List<AttendanceDto> getAllAttendanceLogs() {
+        return attendanceRepository.findAllByOrderByStampTimeDesc().stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
     }
 }

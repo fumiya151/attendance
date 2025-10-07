@@ -46,8 +46,8 @@
             <section id="attendance-logs" class="content-view">
                 <h3>勤怠ログ/修正</h3>
                 <div class="action-bar">
-                    <input type="text" placeholder="氏名、日付で検索..." class="search-input">
-                    <button class="primary-btn"><i class="fas fa-search"></i> 検索</button>
+                    <input type="text" id="search-input" placeholder="氏名、日付で検索..." class="search-input">
+                    <button class="primary-btn" id="search-button"><i class="fas fa-search"></i> 検索</button>
                 </div>
 
                 <table class="data-table">
@@ -56,39 +56,20 @@
                             <th>日付</th>
                             <th>氏名</th>
                             <th>出勤時刻</th>
+                            <th>休憩時間</th>
                             <th>退勤時刻</th>
                             <th>ステータス</th>
                             <th>アクション</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td>2025-10-02</td>
-                            <td>佐藤 太郎</td>
-                            <td>09:05</td>
-                            <td>18:10</td>
-                            <td><span class="status-approved">承認済</span></td>
-                            <td>
-                                <button class="small-btn edit-btn"><i class="fas fa-pen"></i> 修正依頼</button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>2025-10-02</td>
-                            <td>鈴木 次郎</td>
-                            <td>08:58</td>
-                            <td>19:30</td>
-                            <td><span class="status-pending">修正依頼中</span></td>
-                            <td>
-                                <button class="small-btn approve-btn"><i class="fas fa-check"></i> 承認</button>
-                                <button class="small-btn reject-btn"><i class="fas fa-times"></i> 否認</button>
-                            </td>
-                        </tr>
                     </tbody>
                 </table>
             </section>
 
         </main>
     </div>
+    <script src="../js/attendance_log.js"></script>
 </body>
 
 </html>

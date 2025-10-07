@@ -8,6 +8,7 @@ import com.example.attendance.attendance_app.repository.AttendanceRepository;
 import com.example.attendance.attendance_app.repository.EmployeeRepository;
 import com.example.attendance.attendance_app.repository.EmployeeWageHistoryRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -33,6 +34,7 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PayrollService {
 
     // コンストラクタインジェクション (Lombokの@RequiredArgsConstructorを使用)
@@ -42,6 +44,16 @@ public class PayrollService {
 
     // システムが基準とするタイムゾーンオフセット (JST: UTC+9)
     private static final ZoneOffset DEFAULT_TIME_ZONE_OFFSET = ZoneOffset.ofHours(9);
+
+    private static final String WAGE_NOT_FOUND_MSG = "従業員ID: {} の有効な時給が見つかりませんでした。計算対象日: {}";
+
+    private static final String STAMP_TYPE_IN = "出勤"; // JSとControllerの定数に合わせるため変更
+    private static final String STAMP_TYPE_OUT = "退勤"; // JSとControllerの定数に合わせるため変更
+    private static final String STAMP_TYPE_BREAK_START = "休憩開始"; // JSとControllerの定数に合わせるため変更
+    private static final String STAMP_TYPE_BREAK_END = "休憩終了"; // JSとControllerの定数に合わせるため変更
+
+    private static final double HOURS_ROUNDING_SCALE = 100.0;
+    private static final double MINUTES_IN_HOUR = 60.0;
 
     /**
      * 指定期間の給与計算を実行し、結果のDTOリストを返却するメソッドです。
@@ -56,7 +68,7 @@ public class PayrollService {
      * 時給が設定されていない従業員は計算対象からスキップされます。
      *
      * @param startDate 計算開始日
-     * @param endDate   計算終了日
+     * @param endDate     計算終了日
      * @return 計算結果のDTOリスト
      */
     public List<PayrollDto> calculatePayroll(LocalDate startDate, LocalDate endDate) {
@@ -72,7 +84,6 @@ public class PayrollService {
         List<Attendance> allAttendances = attendanceRepository.findByPeriod(startDateTime, endDateTime);
 
         // 従業員IDごとに勤怠ログをグループ化
-        // 【修正箇所】Attendance::getEmployeeId から ラムダ式 (a -> a.getEmployee().getId()) に変更
         Map<String, List<Attendance>> logsByEmployee = allAttendances.stream()
                 .collect(Collectors.groupingBy(a -> a.getEmployee().getEmployeeId()));
 
@@ -86,6 +97,7 @@ public class PayrollService {
                     .orElse(BigDecimal.ZERO);
 
             if (hourlyWage.compareTo(BigDecimal.ZERO) <= 0) {
+                log.warn(WAGE_NOT_FOUND_MSG, employeeId, startDate);
                 continue; // 時給が0以下の従業員は計算対象外
             }
 
@@ -101,7 +113,7 @@ public class PayrollService {
             payrolls.add(new PayrollDto(
                     employeeId,
                     employee.getName(),
-                    Math.round(totalHours * 100.0) / 100.0, // 小数点第2位で四捨五入
+                    Math.round(totalHours * HOURS_ROUNDING_SCALE) / HOURS_ROUNDING_SCALE, // 小数点第2位で四捨五入
                     Double.valueOf(Math.round(calculatedSalary)) // 整数に丸め
             ));
         }
@@ -167,29 +179,32 @@ public class PayrollService {
             String type = attendance.getStampType();
             OffsetDateTime stampTime = attendance.getStampTime();
 
-            if ("IN".equals(type)) {
-                // 新しい勤務開始。連続したINは後のログで上書き
+            if (STAMP_TYPE_IN.equals(type)) {
+                // 勤務開始
                 clockInTime = stampTime;
                 breakStartTime = null;
-            } else if ("OUT".equals(type) && clockInTime != null) {
-                // 退勤: 勤務終了までの時間を労働時間に加算
+            } else if (STAMP_TYPE_OUT.equals(type) && clockInTime != null) {
+                // 退勤: 最後の勤務区間を労働時間に加算
                 netWorkDuration = netWorkDuration.plus(Duration.between(clockInTime, stampTime));
 
-                // 勤務終了
+                // 勤務終了（ペアをリセット）
                 clockInTime = null;
                 breakStartTime = null;
-            } else if ("BREAK_START".equals(type) && clockInTime != null && breakStartTime == null) {
-                // 休憩開始: 休憩開始までの時間を労働時間に加算し、休憩開始時刻を保持
+            } else if (STAMP_TYPE_BREAK_START.equals(type) && clockInTime != null && breakStartTime == null) {
+                // 休憩開始: 休憩開始までの時間を労働時間に加算し、休憩期間を開始
                 netWorkDuration = netWorkDuration.plus(Duration.between(clockInTime, stampTime));
-                breakStartTime = stampTime;
-            } else if ("BREAK_END".equals(type) && breakStartTime != null) {
-                // 休憩終了: 休憩期間をスキップし、休憩終了時刻を次の労働時間開始点として設定
-                clockInTime = stampTime;
+                breakStartTime = stampTime; // 休憩開始時刻を保持
+                clockInTime = null; // 勤務区間を一時終了
+
+            } else if (STAMP_TYPE_BREAK_END.equals(type) && breakStartTime != null) {
+                // 休憩終了: 休憩区間をスキップし、休憩終了時刻を新しい勤務開始時刻とする
+                clockInTime = stampTime; // 次の勤務区間の開始点を設定
                 breakStartTime = null;
             }
+            // ログの整合性が取れないケースは無視
         }
 
         // 分を時間に変換して返す
-        return netWorkDuration.toMinutes() / 60.0;
+        return netWorkDuration.toMinutes() / MINUTES_IN_HOUR;
     }
 }

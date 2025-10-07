@@ -21,8 +21,10 @@ public interface EmployeeWageHistoryRepository extends JpaRepository<EmployeeWag
          */
         @Query("SELECT h FROM EmployeeWageHistory h " +
                         "WHERE h.employee.employeeId = :employeeId " +
-                        "  AND h.effectiveStartDate <= :targetDate " +
-                        "  AND (h.effectiveEndDate IS NULL OR h.effectiveEndDate >= :targetDate)")
+                        "  AND h.effectiveStartDate <= :targetDate " + // 開始日がターゲット日以前である
+                        "  AND (h.effectiveEndDate IS NULL OR h.effectiveEndDate >= :targetDate) " + // 終了日がNULLか、ターゲット日以後である
+                        "ORDER BY h.effectiveStartDate DESC " + // 複数の有効な時給がある場合、開始日が最新のものを優先
+                        "LIMIT 1") // 1件だけ取得
         Optional<EmployeeWageHistory> findApplicableWageByEmployeeIdAndDate(
                         @Param("employeeId") String employeeId,
                         @Param("targetDate") LocalDate targetDate);

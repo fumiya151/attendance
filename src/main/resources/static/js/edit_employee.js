@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', async () => {
     const form = document.getElementById('employee-edit-form');
     const urlParams = new URLSearchParams(window.location.search);
-    const employeeId = urlParams.get('id');
+    const employeeId = urlParams.get('employeeId');
 
     if (!employeeId) {
         alert('従業員IDが指定されていません。');
@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         sessionStorage.setItem('originalEmployeeData', JSON.stringify(employee));
 
         // フォームに値を設定
-        form.employeeCode.value = employee.employeeCode;
+        form.employeeId.value = employee.employeeId;
         form.name.value = employee.name;
         form.department.value = employee.department;
         form.email.value = employee.email || '';
@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 編集後のデータをオブジェクトとしてまとめる
         const editedEmployeeData = {
             id: employeeId,
-            employeeCode: form.employeeCode.value,
+            employeeId: form.employeeId.value,
             name: form.name.value,
             department: form.department.value,
             email: form.email.value,

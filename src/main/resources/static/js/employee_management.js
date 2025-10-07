@@ -17,7 +17,7 @@ function renderEmployeeRows(list) {
     list.forEach(emp => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${emp.employeeCode}</td>
+            <td>${emp.employeeId}</td>
             <td>${emp.name}</td>
             <td>${emp.department}</td>
             <td><span class="${emp.active ? 'status-active' : 'status-inactive'}">${emp.active ? '在職中' : '退職'}</span></td>
@@ -27,13 +27,13 @@ function renderEmployeeRows(list) {
             </td>
         `;
         tr.querySelector('.edit-btn').addEventListener('click', () => {
-            window.location.href = `/html/edit_employee.html?id=${emp.id}`;
+            window.location.href = `/html/edit_employee.html?id=${emp.employeeId}`;
         });
         // 削除ボタン
         tr.querySelector('.delete-btn').addEventListener('click', async () => {
             if (confirm('本当に削除しますか？')) {
                 try {
-                    const res = await fetch(`/api/employees/${emp.id}`, {
+                    const res = await fetch(`/api/employees/${emp.employeeId}`, {
                         method: 'DELETE'
                     });
                     if (res.ok) {
@@ -108,7 +108,7 @@ const form = document.getElementById('employee-register-form');
 form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const data = {
-        employeeCode: form.employeeCode.value,
+        employeeId: form.employeeId.value,
         name: form.employeeName.value,
         department: form.department.value,
         password: form.password.value

@@ -77,4 +77,20 @@ public class AttendanceController {
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
+
+    /**
+     * 全勤怠取得APIのエンドポイントです.
+     *
+     * 【機能】
+     * データベースに存在する全ての勤怠記録（出勤、退勤、休憩など）を取得し、DTOリストとして返却します。
+     *
+     * 【注意事項】
+     * 処理に時間がかかる可能性があるため、本番環境では期間指定やページネーションを推奨します。
+     *
+     * @return 全勤怠DTOリスト
+     */
+    @GetMapping("/logs")
+    public List<AttendanceDto> getAttendanceLogs() {
+        return attendanceService.getAllAttendanceLogs();
+    }
 }
