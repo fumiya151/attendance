@@ -21,6 +21,10 @@ public class AttendanceService {
     private final AttendanceRepository attendanceRepository;
     private final EmployeeRepository employeeRepository;
 
+    // JST (UTC+9) タイムゾーンを定義
+    private static final ZoneId JST_ZONE = ZoneId.of("Asia/Tokyo");
+
+    // 打刻種別の定数
     private final String workSt = "出勤";
     private final String workEd = "退勤";
     private final String breakSt = "休憩開始";
@@ -39,21 +43,24 @@ public class AttendanceService {
      * @return 有効な打刻種別リスト
      */
     public List<String> getNextAvailableStampTypes(String employeeId) {
+        // getLatestAttendance は「本日中の」最新打刻を取得する
         Optional<AttendanceDto> latestAttendanceOpt = getLatestAttendance(employeeId);
+
         if (latestAttendanceOpt.isEmpty()) {
-            // 最初の打刻は「出勤」のみ有効
+            // 本日中の打刻がない場合、必ず「出勤」が有効
             return List.of(workSt);
         }
+
         String lastStampType = latestAttendanceOpt.get().getStampType();
         switch (lastStampType) {
-            case workSt:
+            case workSt: // 出勤
                 return List.of(workEd, breakSt);
-            case "退勤":
-                // 1日に複数回の出退勤を許可する場合は「出勤」も有効
+            case workEd: // 退勤
+                // 本日の勤務は終了とみなし、次の出勤を許可する（翌日以降の打刻用）
                 return List.of(workSt);
-            case "休憩開始":
+            case breakSt: // 休憩開始
                 return List.of(breakEd);
-            case "休憩終了":
+            case breakEd: // 休憩終了
                 return List.of(workEd, breakSt);
             default:
                 return List.of();
@@ -79,7 +86,8 @@ public class AttendanceService {
 
         Attendance attendance = new Attendance();
         attendance.setEmployee(employee);
-        attendance.setStampTime(OffsetDateTime.now(ZoneId.of("Asia/Tokyo")));
+        // JST (Asia/Tokyo) タイムゾーンで現在時刻を取得し、DBに保存
+        attendance.setStampTime(OffsetDateTime.now(JST_ZONE));
         attendance.setStampType(request.getAttendanceType());
 
         return attendanceRepository.save(attendance);
@@ -89,7 +97,7 @@ public class AttendanceService {
      * 最新の勤怠情報を取得するメソッドです.
      *
      * 【機能】
-     * 指定従業員の最新勤怠情報を返します。
+     * 指定従業員の最新勤怠情報を返します。（本日中の最新打刻に絞る）
      *
      * 【注意事項】
      * 該当データがない場合は空を返します。
@@ -98,8 +106,16 @@ public class AttendanceService {
      * @return 最新勤怠DTO（Optional）
      */
     public Optional<AttendanceDto> getLatestAttendance(String employeeId) {
-        OffsetDateTime now = OffsetDateTime.now();
-        OffsetDateTime startOfDay = now.toLocalDate().atStartOfDay(now.getOffset()).toOffsetDateTime();
+        // JST (Asia/Tokyo) を基準に「今」の時刻を取得
+        OffsetDateTime now = OffsetDateTime.now(JST_ZONE);
+
+        // 今日の日付の開始時刻（00:00:00 JST）をOffsetDateTimeとして取得
+        // この startOfDay が、本日中の打刻のみに絞り込むための鍵となる
+        OffsetDateTime startOfDay = now.toLocalDate().atStartOfDay(JST_ZONE).toOffsetDateTime();
+
+        // Repository のメソッド名が
+        // findTopByEmployeeEmployeeIdAndStampTimeBetweenOrderByStampTimeDesc であることを前提
+        // このクエリが正しく startOfDay と now で絞り込めているか、SQLログで確認が必要です。
         return attendanceRepository
                 .findTopByEmployeeEmployeeIdAndStampTimeBetweenOrderByStampTimeDesc(employeeId, startOfDay, now)
                 .map(this::convertToDto);
@@ -119,7 +135,6 @@ public class AttendanceService {
      */
     private AttendanceDto convertToDto(Attendance attendance) {
         AttendanceDto dto = new AttendanceDto();
-        dto.setId(attendance.getId());
         dto.setEmployeeId(attendance.getEmployee().getEmployeeId());
         dto.setStampTime(attendance.getStampTime());
         dto.setStampType(attendance.getStampType());

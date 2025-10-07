@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-    let selectedUserId = null;
     let selectedUserName = '';
     let selectedUserCode = '';
 
@@ -34,10 +33,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const item = document.createElement('div');
                 item.className = 'employee-item';
                 item.textContent = emp.name;
-                item.setAttribute('data-id', emp.id);
-                item.setAttribute('data-name', emp.name);
-                item.setAttribute('data-code', emp.employeeCode);
-                item.onclick = () => selectEmployee(emp.id, emp.name, emp.employeeCode, item);
+                item.setAttribute('data-code', emp.employeeId);
+                item.onclick = () => selectEmployee(emp.name, emp.employeeId, item);
                 listElement.appendChild(item);
             });
         } catch (error) {
@@ -59,11 +56,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            const response = await fetch(`/api/attendance/next-available/${employeeId}`);
+            const encodedEmployeeId = encodeURIComponent(employeeId);
+            const response = await fetch(`/api/attendance/next-available/${encodedEmployeeId}`);
+            
             if (response.ok) {
                 const availableTypes = await response.json();
+                
                 // すべて一旦無効化
                 Object.values(buttons).forEach(btn => btn.disabled = true);
+                
                 // 有効な打刻種別のみ有効化
                 availableTypes.forEach(type => {
                     if (buttons[type]) buttons[type].disabled = false;
@@ -79,8 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 従業員選択時の処理
-    window.selectEmployee = function (id, name, code, element) {
-        selectedUserId = id;
+    window.selectEmployee = function (name, code, element) {
         selectedUserName = name;
         selectedUserCode = code;
         document.getElementById('selected-name').textContent = name;
@@ -95,22 +95,21 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('message-area').className = 'message-box is-info';
 
         document.querySelector('.selected-user-info .prompt').style.display = 'none';
-        updateButtonStates(id); // ボタンの状態を更新
+        updateButtonStates(code); // ボタンの状態を更新
     }
 
     // 打刻処理
     window.stamp = async function (type) {
         const messageArea = document.getElementById('message-area');
 
-        if (selectedUserId === null) {
+        if (!selectedUserCode) {
             messageArea.textContent = '⚠️ まずリストから自分の名前を選択してください！';
             messageArea.className = 'message-box is-error';
             return;
         }
 
         const attendanceData = {
-            employeeId: selectedUserId,
-            employeeCode: selectedUserCode,
+            employeeId: selectedUserCode,
             name: selectedUserName,
             attendanceType: type
         };
@@ -129,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (response.ok) {
                 messageArea.textContent = `✅ ${responseText}`;
                 messageArea.className = 'message-box is-success';
-                updateButtonStates(selectedUserId); // 打刻成功後にボタン状態を更新
+                updateButtonStates(selectedUserCode); // 打刻成功後にボタン状態を更新
             } else {
                 throw new Error(responseText || 'サーバーでエラーが発生しました。');
             }

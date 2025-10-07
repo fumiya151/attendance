@@ -69,6 +69,17 @@ public class EmployeeController {
     }
 
     /**
+     * 従業員をIDで取得するAPIのエンドポイントです.
+     *
+     * @param employeeId 従業員ID
+     * @return 従業員DTO
+     */
+    @GetMapping("/{id}")
+    public EmployeeDto getEmployeeById(@PathVariable("id") String employeeId) { // ★ 修正: 明示的に "id" を指定
+        return employeeService.getEmployeeById(employeeId);
+    }
+
+    /**
      * 従業員編集APIのエンドポイントです.
      *
      * 【機能】
@@ -77,18 +88,15 @@ public class EmployeeController {
      * 【注意事項】
      * 特になし
      *
-     * @param id  従業員ID
-     * @param dto 更新内容（DTO）
+     * @param employeeId 従業員ID
+     * @param dto        更新内容（DTO）
      * @return 更新後の従業員DTO
      */
-    @GetMapping("/{id}")
-    public EmployeeDto getEmployeeById(@PathVariable String EmployeeId) {
-        return employeeService.getEmployeeById(EmployeeId);
-    }
-
     @PutMapping("/{id}")
-    public EmployeeDto updateEmployee(@PathVariable String EmployeeId, @RequestBody EmployeeDto dto) {
-        return employeeService.updateEmployee(EmployeeId, dto);
+    public EmployeeDto updateEmployee(@PathVariable("id") String employeeId, @RequestBody EmployeeDto dto) { // ★ 修正:
+                                                                                                             // 明示的に
+                                                                                                             // "id" を指定
+        return employeeService.updateEmployee(employeeId, dto);
     }
 
     /**
@@ -100,10 +108,10 @@ public class EmployeeController {
      * 【注意事項】
      * 関連データがある場合は削除時エラーになる可能性があります。
      *
-     * @param id 従業員ID
+     * @param employeeId 従業員ID
      */
     @DeleteMapping("/{id}")
-    public void deleteEmployee(@PathVariable String EmployeeId) {
-        employeeService.deleteEmployee(EmployeeId);
+    public void deleteEmployee(@PathVariable("id") String employeeId) { // ★ 修正: 明示的に "id" を指定
+        employeeService.deleteEmployee(employeeId);
     }
 }

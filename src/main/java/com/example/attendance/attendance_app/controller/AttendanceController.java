@@ -19,12 +19,13 @@ public class AttendanceController {
 
     /**
      * 次に有効な打刻種別リストを返すAPI
+     * * @param employeeId 従業員ID
      * 
-     * @param employeeId 従業員ID
      * @return 有効な打刻種別リスト
      */
     @GetMapping("/next-available/{employeeId}")
     public List<String> getNextAvailableStampTypes(@PathVariable String employeeId) {
+        // Serviceからの応答をそのままJSONリストとして返す
         return attendanceService.getNextAvailableStampTypes(employeeId);
     }
 
@@ -44,6 +45,7 @@ public class AttendanceController {
     public ResponseEntity<String> recordAttendance(@RequestBody AttendanceRequest request) {
         Attendance savedAttendance = attendanceService.recordAttendance(request);
 
+        // タイムゾーン情報を含まないシンプルなフォーマットで時刻を整形
         String formattedTimestamp = savedAttendance.getStampTime()
                 .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
 
@@ -70,6 +72,7 @@ public class AttendanceController {
      */
     @GetMapping("/latest/{employeeId}")
     public ResponseEntity<AttendanceDto> getLatestAttendance(@PathVariable String employeeId) {
+        // このAPIは、getNextAvailableStampTypes では使用しないため、そのまま残します
         return attendanceService.getLatestAttendance(employeeId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
