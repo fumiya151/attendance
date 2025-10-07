@@ -6,7 +6,7 @@ import java.time.OffsetDateTime;
 @Data
 public class AttendanceDto {
     private Long id;
-    private Long employeeId;
+    private String employeeId;
     private OffsetDateTime stampTime;
     private String stampType;
     private String note;

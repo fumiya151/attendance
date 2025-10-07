@@ -24,7 +24,7 @@ public class AttendanceController {
      * @return 有効な打刻種別リスト
      */
     @GetMapping("/next-available/{employeeId}")
-    public List<String> getNextAvailableStampTypes(@PathVariable Long employeeId) {
+    public List<String> getNextAvailableStampTypes(@PathVariable String employeeId) {
         return attendanceService.getNextAvailableStampTypes(employeeId);
     }
 
@@ -69,7 +69,7 @@ public class AttendanceController {
      * @return 最新勤怠DTO
      */
     @GetMapping("/latest/{employeeId}")
-    public ResponseEntity<AttendanceDto> getLatestAttendance(@PathVariable Long employeeId) {
+    public ResponseEntity<AttendanceDto> getLatestAttendance(@PathVariable String employeeId) {
         return attendanceService.getLatestAttendance(employeeId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());

@@ -24,7 +24,7 @@ function renderEmployeeRows(list) {
         tr.id = 'employee-row';
         tr.dataset.id = emp.id; // 従業員IDをdata属性として保持
         tr.innerHTML = `
-            <td>${emp.employeeCode}</td>
+            <td>${emp.employeeId}</td>
             <td>${emp.name}</td>
             <td>${emp.department}</td>
             <td><span class="${emp.active ? 'status-active' : 'status-inactive'}">${emp.active ? '在職中' : '退職'}</span></td>

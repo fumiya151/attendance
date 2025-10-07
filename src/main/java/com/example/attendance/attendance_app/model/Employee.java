@@ -1,48 +1,39 @@
 package com.example.attendance.attendance_app.model;
 
-import java.time.LocalDate;
-
-import jakarta.persistence.Column;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import jakarta.persistence.Entity;
+import java.time.LocalDate;
 
 @Entity
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Table(name = "employee")
 public class Employee {
+
+    // 主キー: 従業員コードがVARCHAR主キーとしてemployee_idにリネームされたもの
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id; // 主キー
+    @Column(name = "employee_id", length = 20)
+    private String employeeId;
 
-    @Column(name = "employee_code", unique = true, nullable = false)
-    private String employeeCode; // 従業員コード (ユニーク必須)
+    @Column(name = "name", nullable = false, length = 100)
+    private String name;
 
-    @Column(name = "name", nullable = false)
-    private String name; // 氏名
+    @Column(name = "email", nullable = false, length = 150)
+    private String email;
 
-    @Column(name = "email", unique = true, nullable = false, length = 150)
-    private String email; // メールアドレス (ユニーク必須)
-
-    @Column(name = "department")
-    private String department; // 部署名
+    @Column(name = "department", length = 50)
+    private String department;
 
     @Column(name = "hire_date")
-    private LocalDate hireDate; // 入社日
+    private LocalDate hireDate;
 
     @Column(name = "is_active", nullable = false)
-    private boolean isActive = true; // 在職状況 (デフォルトは在職中)
-    
-    // パスワードは後でSpring Securityで暗号化して保存します
-    @Column(name = "password") 
-    private String password;
+    private Boolean isActive = true;
 
-    @Column(name = "hourly_wage")
-    private Integer hourlyWage; // 時給
+    @Column(name = "password", length = 255)
+    private String password;
 }

@@ -82,13 +82,13 @@ public class EmployeeController {
      * @return 更新後の従業員DTO
      */
     @GetMapping("/{id}")
-    public EmployeeDto getEmployeeById(@PathVariable Long id) {
-        return employeeService.getEmployeeById(id);
+    public EmployeeDto getEmployeeById(@PathVariable String EmployeeId) {
+        return employeeService.getEmployeeById(EmployeeId);
     }
 
     @PutMapping("/{id}")
-    public EmployeeDto updateEmployee(@PathVariable Long id, @RequestBody EmployeeDto dto) {
-        return employeeService.updateEmployee(id, dto);
+    public EmployeeDto updateEmployee(@PathVariable String EmployeeId, @RequestBody EmployeeDto dto) {
+        return employeeService.updateEmployee(EmployeeId, dto);
     }
 
     /**
@@ -103,7 +103,7 @@ public class EmployeeController {
      * @param id 従業員ID
      */
     @DeleteMapping("/{id}")
-    public void deleteEmployee(@PathVariable Long id) {
-        employeeService.deleteEmployee(id);
+    public void deleteEmployee(@PathVariable String EmployeeId) {
+        employeeService.deleteEmployee(EmployeeId);
     }
 }

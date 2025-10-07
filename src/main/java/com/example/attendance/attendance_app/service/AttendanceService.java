@@ -38,7 +38,7 @@ public class AttendanceService {
      * @param employeeId 従業員ID
      * @return 有効な打刻種別リスト
      */
-    public List<String> getNextAvailableStampTypes(Long employeeId) {
+    public List<String> getNextAvailableStampTypes(String employeeId) {
         Optional<AttendanceDto> latestAttendanceOpt = getLatestAttendance(employeeId);
         if (latestAttendanceOpt.isEmpty()) {
             // 最初の打刻は「出勤」のみ有効
@@ -97,11 +97,11 @@ public class AttendanceService {
      * @param employeeId 従業員ID
      * @return 最新勤怠DTO（Optional）
      */
-    public Optional<AttendanceDto> getLatestAttendance(Long employeeId) {
+    public Optional<AttendanceDto> getLatestAttendance(String employeeId) {
         OffsetDateTime now = OffsetDateTime.now();
         OffsetDateTime startOfDay = now.toLocalDate().atStartOfDay(now.getOffset()).toOffsetDateTime();
         return attendanceRepository
-                .findTopByEmployeeIdAndStampTimeBetweenOrderByStampTimeDesc(employeeId, startOfDay, now)
+                .findTopByEmployeeEmployeeIdAndStampTimeBetweenOrderByStampTimeDesc(employeeId, startOfDay, now)
                 .map(this::convertToDto);
     }
 
@@ -120,7 +120,7 @@ public class AttendanceService {
     private AttendanceDto convertToDto(Attendance attendance) {
         AttendanceDto dto = new AttendanceDto();
         dto.setId(attendance.getId());
-        dto.setEmployeeId(attendance.getEmployee().getId());
+        dto.setEmployeeId(attendance.getEmployee().getEmployeeId());
         dto.setStampTime(attendance.getStampTime());
         dto.setStampType(attendance.getStampType());
         dto.setNote(attendance.getNote());

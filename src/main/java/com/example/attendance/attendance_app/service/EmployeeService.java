@@ -5,14 +5,17 @@ import com.example.attendance.attendance_app.model.Employee;
 import com.example.attendance.attendance_app.repository.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.springframework.security.crypto.bcrypt.BCrypt;
 
 @Service
 @RequiredArgsConstructor
 public class EmployeeService {
+
     private final EmployeeRepository employeeRepository;
+    private final PasswordEncoder passwordEncoder; // ★ 修正：PasswordEncoderを注入
 
     /**
      * 従業員一覧を取得するメソッドです.
@@ -45,12 +48,11 @@ public class EmployeeService {
      */
     private EmployeeDto convertToDto(Employee employee) {
         EmployeeDto dto = new EmployeeDto();
-        dto.setId(employee.getId());
-        dto.setEmployeeCode(employee.getEmployeeCode());
+        dto.setEmployeeId(employee.getEmployeeId());
         dto.setName(employee.getName());
         dto.setDepartment(employee.getDepartment());
         dto.setEmail(employee.getEmail());
-        dto.setActive(employee.isActive());
+        dto.setActive(employee.getIsActive());
         return dto;
     }
 
@@ -63,13 +65,21 @@ public class EmployeeService {
      * 【注意事項】
      * パスワードはハッシュ化して保存されます。
      *
-     * @param employee 従業員エンティティ
+     * @param employee 従業員エンティティ（employeeIdがセットされていること）
      */
+    @Transactional
     public void registerEmployee(Employee employee) {
-        if (employee.getPassword() != null && !employee.getPassword().isEmpty()) {
-            String hashed = BCrypt.hashpw(employee.getPassword(), BCrypt.gensalt());
-            employee.setPassword(hashed);
+        // ★ 修正1：主キーの存在チェックと例外処理（IdentifierGenerationExceptionの回避）
+        if (employee.getEmployeeId() == null || employee.getEmployeeId().isEmpty()) {
+            throw new IllegalArgumentException("従業員ID（主キー）は必須です。");
         }
+
+        if (employee.getPassword() != null && !employee.getPassword().isEmpty()) {
+            // ★ 修正2：BCrypt.hashpwの代わりにPasswordEncoderを使用
+            String hashedPassword = passwordEncoder.encode(employee.getPassword());
+            employee.setPassword(hashedPassword);
+        }
+
         employee.setHireDate(java.time.LocalDate.now());
         employeeRepository.save(employee);
     }
@@ -84,7 +94,7 @@ public class EmployeeService {
      * キーワードがnullまたは空の場合は全件取得します。
      *
      * @param keyword 検索キーワード（任意）
-     * @param limit   最大表示件数
+     * @param limit     最大表示件数
      * @return 従業員DTOリスト
      */
     public List<EmployeeDto> searchEmployees(String keyword, int limit) {
@@ -92,7 +102,7 @@ public class EmployeeService {
         if (keyword == null || keyword.isEmpty()) {
             employees = employeeRepository.findAll();
         } else {
-            employees = employeeRepository.findByNameContainingIgnoreCaseOrEmployeeCodeContainingIgnoreCase(keyword,
+            employees = employeeRepository.findByNameContainingIgnoreCaseOrEmployeeIdContainingIgnoreCase(keyword,
                     keyword);
         }
         return employees.stream()
@@ -110,17 +120,26 @@ public class EmployeeService {
      * 【注意事項】
      * 特になし
      *
-     * @param id  従業員ID
-     * @param dto 更新内容（DTO）
+     * @param employeeId 従業員ID
+     * @param dto        更新内容（DTO）
      * @return 更新後の従業員DTO
      */
-    public EmployeeDto updateEmployee(Long id, EmployeeDto dto) {
-        Employee emp = employeeRepository.findById(id).orElseThrow(() -> new RuntimeException("従業員が見つかりません"));
+    @Transactional
+    public EmployeeDto updateEmployee(String employeeId, EmployeeDto dto) { // ★ 引数名を統一
+        Employee emp = employeeRepository.findById(employeeId).orElseThrow(() -> new RuntimeException("従業員が見つかりません"));
+        // employeeIdは主キーなので通常は変更しないが、DTOに含まれている場合は更新
+        if (!emp.getEmployeeId().equals(dto.getEmployeeId())) {
+            throw new IllegalArgumentException("従業員IDは変更できません。");
+        }
+
         emp.setName(dto.getName());
         emp.setDepartment(dto.getDepartment());
-        emp.setEmployeeCode(dto.getEmployeeCode());
-        emp.setActive(dto.isActive());
+        // emp.setEmployeeId(dto.getEmployeeId()); // 主キーの再設定は不要
+        emp.setIsActive(dto.isActive());
         emp.setEmail(dto.getEmail());
+
+        // パスワードは更新DTOに含まれないことが多いため、ここでは処理しない
+
         employeeRepository.save(emp);
         return convertToDto(emp);
     }
@@ -128,11 +147,12 @@ public class EmployeeService {
     /**
      * 従業員をIDで取得するメソッドです.
      *
-     * @param id 従業員ID
+     * @param employeeId 従業員ID
      * @return 従業員DTO
      */
-    public EmployeeDto getEmployeeById(Long id) {
-        Employee employee = employeeRepository.findById(id).orElseThrow(() -> new RuntimeException("従業員が見つかりません"));
+    public EmployeeDto getEmployeeById(String employeeId) { // ★ 引数名を統一
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new RuntimeException("従業員が見つかりません"));
         return convertToDto(employee);
     }
 
@@ -145,9 +165,10 @@ public class EmployeeService {
      * 【注意事項】
      * 特になし
      *
-     * @param id 従業員ID
+     * @param employeeId 従業員ID
      */
-    public void deleteEmployee(Long id) {
-        employeeRepository.deleteById(id);
+    @Transactional
+    public void deleteEmployee(String employeeId) { // ★ 引数名を統一
+        employeeRepository.deleteById(employeeId);
     }
 }

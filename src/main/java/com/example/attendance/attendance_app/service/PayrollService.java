@@ -3,66 +3,193 @@ package com.example.attendance.attendance_app.service;
 import com.example.attendance.attendance_app.dto.PayrollDto;
 import com.example.attendance.attendance_app.model.Attendance;
 import com.example.attendance.attendance_app.model.Employee;
+import com.example.attendance.attendance_app.model.EmployeeWageHistory;
 import com.example.attendance.attendance_app.repository.AttendanceRepository;
 import com.example.attendance.attendance_app.repository.EmployeeRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.example.attendance.attendance_app.repository.EmployeeWageHistoryRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
+/**
+ * 従業員の給与計算ロジックを管理するサービスです。
+ * 勤怠ログと時給履歴に基づき、指定期間の実労働時間と給与を計算します。
+ *
+ * 【機能】
+ * 期間指定による全従業員の給与計算、時給履歴の参照、休憩時間の自動差し引きを行います。
+ *
+ * 【注意事項】
+ * 正確な計算のため、AttendanceRepositoryに findByPeriod メソッドの実装が必要です。
+ */
 @Service
+@RequiredArgsConstructor
 public class PayrollService {
 
-    @Autowired
-    private EmployeeRepository employeeRepository;
+    // コンストラクタインジェクション (Lombokの@RequiredArgsConstructorを使用)
+    private final EmployeeRepository employeeRepository;
+    private final AttendanceRepository attendanceRepository;
+    private final EmployeeWageHistoryRepository wageHistoryRepository;
 
-    @Autowired
-    private AttendanceRepository attendanceRepository;
+    // システムが基準とするタイムゾーンオフセット (JST: UTC+9)
+    private static final ZoneOffset DEFAULT_TIME_ZONE_OFFSET = ZoneOffset.ofHours(9);
 
-    public List<PayrollDto> calculatePayroll() {
+    /**
+     * 指定期間の給与計算を実行し、結果のDTOリストを返却するメソッドです。
+     *
+     * 【機能】
+     * 1. 従業員ごとに、期間開始日時点で有効な時給を取得します。
+     * 2. 期間内の勤怠ログを取得し、日ごと・休憩時間を差し引いた実労働時間を計算します。
+     * 3. 計算された実労働時間と時給から給与総額を算出します。
+     *
+     * 【注意事項】
+     * 期間内の勤怠ログは、AttendanceRepositoryの findByPeriod メソッドを通じて取得されます。
+     * 時給が設定されていない従業員は計算対象からスキップされます。
+     *
+     * @param startDate 計算開始日
+     * @param endDate   計算終了日
+     * @return 計算結果のDTOリスト
+     */
+    public List<PayrollDto> calculatePayroll(LocalDate startDate, LocalDate endDate) {
+
         List<Employee> employees = employeeRepository.findAll();
         List<PayrollDto> payrolls = new ArrayList<>();
 
+        // 期間の開始日時と終了日時をタイムゾーンオフセット付きで定義
+        OffsetDateTime startDateTime = startDate.atStartOfDay().atOffset(DEFAULT_TIME_ZONE_OFFSET);
+        OffsetDateTime endDateTime = endDate.plusDays(1).atStartOfDay().atOffset(DEFAULT_TIME_ZONE_OFFSET);
+
+        // 期間内の勤怠データを全て取得
+        List<Attendance> allAttendances = attendanceRepository.findByPeriod(startDateTime, endDateTime);
+
+        // 従業員IDごとに勤怠ログをグループ化
+        // 【修正箇所】Attendance::getEmployeeId から ラムダ式 (a -> a.getEmployee().getId()) に変更
+        Map<String, List<Attendance>> logsByEmployee = allAttendances.stream()
+                .collect(Collectors.groupingBy(a -> a.getEmployee().getEmployeeId()));
+
         for (Employee employee : employees) {
-            // 時給が設定されていない、または0以下の従業員はスキップ
-            if (employee.getHourlyWage() == null || employee.getHourlyWage() <= 0) {
-                continue;
+            String employeeId = employee.getEmployeeId();
+
+            // 1. 時給履歴テーブルから、期間開始日時点で適用される時給を取得
+            BigDecimal hourlyWage = wageHistoryRepository
+                    .findApplicableWageByEmployeeIdAndDate(employeeId, startDate)
+                    .map(EmployeeWageHistory::getHourlyWage)
+                    .orElse(BigDecimal.ZERO);
+
+            if (hourlyWage.compareTo(BigDecimal.ZERO) <= 0) {
+                continue; // 時給が0以下の従業員は計算対象外
             }
 
-            List<Attendance> attendances = attendanceRepository.findByEmployeeId(employee.getId());
-            
-            // 出勤と退勤のペアを処理
-            double totalHours = 0.0;
-            OffsetDateTime clockInTime = null;
+            List<Attendance> attendances = logsByEmployee.getOrDefault(employeeId, new ArrayList<>());
 
-            // 打刻時間でソート
-            attendances.sort((a1, a2) -> a1.getStampTime().compareTo(a2.getStampTime()));
+            // 2. 労働時間計算ロジックを呼び出し、総実労働時間（時間単位）を取得
+            double totalHours = calculateTotalWorkingHours(attendances);
 
-            for (Attendance attendance : attendances) {
-                if ("clock-in".equals(attendance.getStampType())) {
-                    // 既に出勤打刻がある場合は、最後のものを採用
-                    clockInTime = attendance.getStampTime();
-                } else if ("clock-out".equals(attendance.getStampType()) && clockInTime != null) {
-                    Duration duration = Duration.between(clockInTime, attendance.getStampTime());
-                    totalHours += duration.toMinutes() / 60.0;
-                    clockInTime = null; // ペアをリセット
-                }
-            }
+            // 3. 給与を計算
+            double calculatedSalary = hourlyWage.doubleValue() * totalHours;
 
-            double calculatedSalary = totalHours * employee.getHourlyWage();
-
+            // DTOに追加
             payrolls.add(new PayrollDto(
-                employee.getId(),
-                employee.getName(),
-                // 小数点第2位で四捨五入
-                Math.round(totalHours * 100.0) / 100.0,
-                Double.valueOf(Math.round(calculatedSalary))
+                    employeeId,
+                    employee.getName(),
+                    Math.round(totalHours * 100.0) / 100.0, // 小数点第2位で四捨五入
+                    Double.valueOf(Math.round(calculatedSalary)) // 整数に丸め
             ));
         }
 
         return payrolls;
+    }
+
+    /**
+     * 期間内の全勤怠ログを日ごとに処理し、総実労働時間を計算するメソッドです。
+     *
+     * 【機能】
+     * 勤怠ログを日付ごとにグループ化し、各日の実労働時間を合算して返します。
+     *
+     * 【注意事項】
+     * タイムゾーンは DEFAULT_TIME_ZONE_OFFSET を基準とします。
+     *
+     * @param attendances 期間内の全勤怠ログ
+     * @return 期間の総実労働時間 (時間単位)
+     */
+    private double calculateTotalWorkingHours(List<Attendance> attendances) {
+        if (attendances.isEmpty()) {
+            return 0.0;
+        }
+
+        // ログを打刻日 (LocalDate) ごとにグループ化
+        Map<LocalDate, List<Attendance>> logsByDate = attendances.stream()
+                .collect(Collectors.groupingBy(
+                        a -> a.getStampTime().atZoneSameInstant(DEFAULT_TIME_ZONE_OFFSET.normalized()).toLocalDate()));
+
+        double totalNetWorkingHours = 0.0;
+
+        // 日付ごとに労働時間を計算
+        for (List<Attendance> dailyLogs : logsByDate.values()) {
+            // 打刻時間でソート
+            dailyLogs.sort(Comparator.comparing(Attendance::getStampTime));
+
+            totalNetWorkingHours += calculateNetWorkingHoursForSingleDay(dailyLogs);
+        }
+
+        return totalNetWorkingHours;
+    }
+
+    /**
+     * 単日分の勤怠ログから実労働時間を計算するロジックです。
+     * 複数回の休憩を正しく差し引き、実労働時間のみを算出します。
+     *
+     * 【機能】
+     * IN/BREAK_START/BREAK_END/OUT の打刻ペアを順に追跡し、
+     * 勤務時間から休憩時間を自動で差し引いた純粋な実労働時間を算出します。
+     *
+     * 【注意事項】
+     * ログがIN, BREAK_START, BREAK_END, OUTの順番で適切に出現することを前提としています。
+     *
+     * @param dailyLogs 単日分の勤怠ログリスト (打刻時間でソート済み)
+     * @return 当日の実労働時間 (時間単位)
+     */
+    private double calculateNetWorkingHoursForSingleDay(List<Attendance> dailyLogs) {
+        Duration netWorkDuration = Duration.ZERO;
+        OffsetDateTime clockInTime = null;
+        OffsetDateTime breakStartTime = null;
+
+        for (Attendance attendance : dailyLogs) {
+            String type = attendance.getStampType();
+            OffsetDateTime stampTime = attendance.getStampTime();
+
+            if ("IN".equals(type)) {
+                // 新しい勤務開始。連続したINは後のログで上書き
+                clockInTime = stampTime;
+                breakStartTime = null;
+            } else if ("OUT".equals(type) && clockInTime != null) {
+                // 退勤: 勤務終了までの時間を労働時間に加算
+                netWorkDuration = netWorkDuration.plus(Duration.between(clockInTime, stampTime));
+
+                // 勤務終了
+                clockInTime = null;
+                breakStartTime = null;
+            } else if ("BREAK_START".equals(type) && clockInTime != null && breakStartTime == null) {
+                // 休憩開始: 休憩開始までの時間を労働時間に加算し、休憩開始時刻を保持
+                netWorkDuration = netWorkDuration.plus(Duration.between(clockInTime, stampTime));
+                breakStartTime = stampTime;
+            } else if ("BREAK_END".equals(type) && breakStartTime != null) {
+                // 休憩終了: 休憩期間をスキップし、休憩終了時刻を次の労働時間開始点として設定
+                clockInTime = stampTime;
+                breakStartTime = null;
+            }
+        }
+
+        // 分を時間に変換して返す
+        return netWorkDuration.toMinutes() / 60.0;
     }
 }

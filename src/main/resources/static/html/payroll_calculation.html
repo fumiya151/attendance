@@ -45,7 +45,14 @@
             <section id="payroll" class="content-view active">
                 <h3>給与計算・勤務時間集計</h3>
                 <div class="action-bar">
-                     <button id="calculate-btn" class="primary-btn"><i class="fas fa-sync-alt"></i> 給与計算を再実行</button>
+                    <label for="start-date-input" style="font-weight: bold;">期間:</label>
+                    <input type="date" id="start-date-input" class="form-input"
+                        style="width: 150px; margin-right: 5px;">
+                    <span style="margin-right: 5px;">〜</span>
+                    <input type="date" id="end-date-input" class="form-input" style="width: 150px; margin-right: 15px;">
+
+                    <button id="calculate-btn" class="primary-btn"><i class="fas fa-sync-alt"></i> 給与計算を実行</button>
+                    <button class="secondary-btn"><i class="fas fa-file-export"></i> CSV出力</button>
                 </div>
 
                 <h4>集計結果一覧</h4>
@@ -59,7 +66,6 @@
                         </tr>
                     </thead>
                     <tbody id="payroll-table-body">
-                        <!-- データはJavaScriptによってここに挿入されます -->
                     </tbody>
                 </table>
             </section>

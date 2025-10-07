@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PayrollDto {
-    private Long employeeId;
+    private String employeeId;
     private String employeeName;
     private Double totalHours;
     private Double calculatedSalary;

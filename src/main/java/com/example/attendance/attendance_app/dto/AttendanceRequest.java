@@ -4,8 +4,7 @@ import lombok.Data;
 
 @Data
 public class AttendanceRequest {
-    private Long employeeId;
-    private String employeeCode;
+    private String employeeId;
     private String name;
     private String attendanceType;
 }

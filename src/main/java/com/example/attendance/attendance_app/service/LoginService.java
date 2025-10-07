@@ -34,8 +34,8 @@ public class LoginService {
      * @param password     パスワード
      * @return JWTトークン（認証失敗時はnull）
      */
-    public String loginAndGenerateToken(String employeeCode, String password) {
-        Optional<Employee> employeeOptional = loginRepository.findByEmployeeCode(employeeCode);
+    public String loginAndGenerateToken(String employeeId, String password) {
+        Optional<Employee> employeeOptional = loginRepository.findByEmployeeId(employeeId);
         if (employeeOptional.isPresent()) {
             Employee employee = employeeOptional.get();
             String hashedPassword = employee.getPassword();
@@ -62,7 +62,7 @@ public class LoginService {
         // HS512用の安全なキー生成
         javax.crypto.SecretKey key = Keys.hmacShaKeyFor(jwtSecretBytes);
         return Jwts.builder()
-                .setSubject(employee.getEmployeeCode())
+                .setSubject(employee.getEmployeeId())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs))
                 .signWith(key, SignatureAlgorithm.HS512)
