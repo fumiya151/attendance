@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import com.example.attendance.attendance_app.dto.EmployeeDto;
+import com.example.attendance.attendance_app.dto.EmployeeRegistrationRequest; // 変更点: 新しいDTOをインポート
 import com.example.attendance.attendance_app.model.Employee;
 import com.example.attendance.attendance_app.service.EmployeeService;
 
@@ -20,17 +21,17 @@ public class EmployeeController {
      * 従業員登録APIのエンドポイントです.
      *
      * 【機能】
-     * 新規従業員情報を登録します。
+     * 新規従業員情報と役割を登録します。
      *
      * 【注意事項】
      * パスワードはハッシュ化されて保存されます。
      *
-     * @param employee 従業員情報
+     * @param request 従業員登録リクエスト (EmployeeRegistrationRequest DTO)
      * @return 登録結果メッセージ
      */
     @PostMapping
-    public String registerEmployee(@RequestBody Employee employee) {
-        employeeService.registerEmployee(employee);
+    public String registerEmployee(@RequestBody EmployeeRegistrationRequest request) { // 変更点: DTOを使用
+        employeeService.registerEmployee(request); // 変更点: DTOをServiceに渡す
         return "登録しました";
     }
 
@@ -89,13 +90,13 @@ public class EmployeeController {
      * 特になし
      *
      * @param employeeId 従業員ID
-     * @param dto        更新内容（DTO）
+     * @param dto               更新内容（DTO）
      * @return 更新後の従業員DTO
      */
     @PutMapping("/{id}")
     public EmployeeDto updateEmployee(@PathVariable("id") String employeeId, @RequestBody EmployeeDto dto) { // ★ 修正:
-                                                                                                             // 明示的に
-                                                                                                             // "id" を指定
+        // 明示的に
+        // "id" を指定
         return employeeService.updateEmployee(employeeId, dto);
     }
 

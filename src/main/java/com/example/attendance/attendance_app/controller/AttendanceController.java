@@ -19,8 +19,14 @@ public class AttendanceController {
 
     /**
      * 次に有効な打刻種別リストを返すAPI
-     * * @param employeeId 従業員ID
-     * 
+     *
+     * 【機能】
+     * 指定従業員の最新打刻状態から、次に有効な打刻種別（出勤・退勤・休憩開始・休憩終了）を判定しリストで返します。
+     *
+     * 【注意事項】
+     * 該当データがない場合は「出勤」のみ有効となります。
+     *
+     * @param employeeId 従業員ID
      * @return 有効な打刻種別リスト
      */
     @GetMapping("/next-available/{employeeId}")
@@ -33,7 +39,7 @@ public class AttendanceController {
      * 勤怠登録APIのエンドポイントです.
      *
      * 【機能】
-     * 勤怠情報を登録します。
+     * 勤怠情報を登録します。打刻が「退勤」の場合、サービス層で日次集計（daily_attendance_summaryへの登録/更新）が実行されます。
      *
      * 【注意事項】
      * バリデーションエラー時は400を返します。
@@ -43,6 +49,8 @@ public class AttendanceController {
      */
     @PostMapping("/stamp")
     public ResponseEntity<String> recordAttendance(@RequestBody AttendanceRequest request) {
+        // Serviceを呼び出し、attendanceテーブルに生ログを登録し、
+        // 退勤の場合は daily_attendance_summary の登録・更新も実行する
         Attendance savedAttendance = attendanceService.recordAttendance(request);
 
         // タイムゾーン情報を含まないシンプルなフォーマットで時刻を整形

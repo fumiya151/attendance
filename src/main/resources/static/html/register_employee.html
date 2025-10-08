@@ -5,27 +5,44 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>新規従業員登録</title>
-    <link rel="stylesheet" href="../css/common.css">
+    <!-- Tailwind CSSをCDNで読み込む（common.cssの代わりとして仮定） -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="../css/register_employee.css">
+    <link rel="stylesheet" href="../css/common.css">
 </head>
 
 <body>
     <div class="register-employee-bg">
         <div class="register-employee-card">
             <h2 class="register-employee-title">新規従業員登録</h2>
+            <div id="message-box"></div> <!-- メッセージボックスを追加 -->
             <form id="employee-register-form" class="register-employee-form">
-                <label for="employeeId" class="input-label">ID</label>
+                <label for="employeeId" class="input-label">従業員ID</label>
                 <input type="text" id="employeeId" name="employeeId" class="input-info" required>
+
                 <label for="employeeName" class="input-label">氏名</label>
                 <input type="text" id="employeeName" name="employeeName" class="input-info" required>
-                <label for="department" class="input-label">役職</label>
-                <input type="text" id="department" name="department" class="input-info" required>
+
+                <label for="roleSelect" class="input-label">役職（権限）</label>
+                <!-- 修正点: selectボックスに変更し、nameとroleIdを保持 -->
+                <select id="roleSelect" name="roleSelect" class="input-info" required>
+                    <option value="" disabled selected>選択してください</option>
+                    <!-- role_id (役割ID) は value として設定 -->
+                    <option value="1" data-department="オーナー">オーナー</option>
+                    <option value="1" data-department="マネージャー">マネージャー</option>
+                    <option value="2" data-department="店長">店長</option>
+                    <option value="3" data-department="従業員">従業員</option>
+                </select>
+
                 <label for="email" class="input-label">メールアドレス</label>
                 <input type="email" id="email" name="email" class="input-info" required>
+
                 <label for="password" class="input-label">パスワード</label>
                 <input type="password" id="password" name="password" class="input-info" required>
+
                 <label for="passwordConfirm" class="input-label">パスワード再入力</label>
                 <input type="password" id="passwordConfirm" name="passwordConfirm" class="input-info" required>
+
                 <button type="submit" class="primary-btn">登録</button>
             </form>
             <div class="register-employee-back">

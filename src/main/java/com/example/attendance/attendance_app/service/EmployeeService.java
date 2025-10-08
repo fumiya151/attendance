@@ -1,8 +1,13 @@
 package com.example.attendance.attendance_app.service;
 
 import com.example.attendance.attendance_app.dto.EmployeeDto;
+import com.example.attendance.attendance_app.dto.EmployeeRegistrationRequest;
 import com.example.attendance.attendance_app.model.Employee;
+import com.example.attendance.attendance_app.model.EmployeeRole;
+import com.example.attendance.attendance_app.model.Role;
 import com.example.attendance.attendance_app.repository.EmployeeRepository;
+import com.example.attendance.attendance_app.repository.EmployeeRoleRepository;
+import com.example.attendance.attendance_app.repository.RoleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,7 +20,26 @@ import java.util.stream.Collectors;
 public class EmployeeService {
 
     private final EmployeeRepository employeeRepository;
-    private final PasswordEncoder passwordEncoder; // ★ 修正：PasswordEncoderを注入
+    private final EmployeeRoleRepository employeeRoleRepository;
+    private final RoleRepository roleRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    // 【新規】役割を割り当てるヘルパーメソッド
+    private void assignDefaultRole(Employee employee, Long roleId) {
+        if (roleId == null) {
+            throw new IllegalArgumentException("役割IDは必須です。");
+        }
+
+        // 役割（Role）が存在するかチェック
+        Role role = roleRepository.findById(roleId)
+                .orElseThrow(() -> new RuntimeException("指定された役割IDが見つかりません: " + roleId));
+
+        // EmployeeRoleエンティティを作成し、割り当てを保存 (DB登録処理)
+        EmployeeRole employeeRole = new EmployeeRole();
+        employeeRole.setEmployeeId(employee.getEmployeeId());
+        employeeRole.setRole(role);
+        employeeRoleRepository.save(employeeRole);
+    }
 
     /**
      * 従業員一覧を取得するメソッドです.
@@ -38,7 +62,7 @@ public class EmployeeService {
      * EmployeeエンティティをDTOに変換するメソッドです.
      *
      * 【機能】
-     * エンティティの各項目をDTOにセットします。
+     * エンティティの各項目をDTOにセットし、**employeeテーブルのdepartment（役職名）**をDTOにセットします。（元の動作に戻す）
      *
      * 【注意事項】
      * 特になし
@@ -50,9 +74,12 @@ public class EmployeeService {
         EmployeeDto dto = new EmployeeDto();
         dto.setEmployeeId(employee.getEmployeeId());
         dto.setName(employee.getName());
-        dto.setDepartment(employee.getDepartment());
         dto.setEmail(employee.getEmail());
         dto.setActive(employee.getIsActive());
+
+        // ★ 修正点: employee_roleからの参照を削除し、employeeテーブルのdepartmentを使用
+        dto.setDepartment(employee.getDepartment());
+
         return dto;
     }
 
@@ -60,28 +87,43 @@ public class EmployeeService {
      * 従業員情報を登録するメソッドです.
      *
      * 【機能】
-     * 新規従業員情報をDBに保存します。
+     * 新規従業員情報と役割をDBに保存します。
      *
      * 【注意事項】
-     * パスワードはハッシュ化して保存されます。
+     * パスワードはハッシュ化して保存され、役割はemployee_roleテーブルに登録されます。
      *
-     * @param employee 従業員エンティティ（employeeIdがセットされていること）
+     * @param request 従業員登録リクエストDTO
      */
     @Transactional
-    public void registerEmployee(Employee employee) {
-        // ★ 修正1：主キーの存在チェックと例外処理（IdentifierGenerationExceptionの回避）
-        if (employee.getEmployeeId() == null || employee.getEmployeeId().isEmpty()) {
+    public void registerEmployee(EmployeeRegistrationRequest request) {
+        // 主キーの存在チェック
+        if (request.getEmployeeId() == null || request.getEmployeeId().isEmpty()) {
             throw new IllegalArgumentException("従業員ID（主キー）は必須です。");
         }
 
-        if (employee.getPassword() != null && !employee.getPassword().isEmpty()) {
-            // ★ 修正2：BCrypt.hashpwの代わりにPasswordEncoderを使用
-            String hashedPassword = passwordEncoder.encode(employee.getPassword());
+        // 1. Employeeエンティティを作成
+        Employee employee = new Employee();
+        employee.setEmployeeId(request.getEmployeeId());
+        employee.setName(request.getName());
+        employee.setDepartment(request.getDepartment());
+        employee.setEmail(request.getEmail());
+        employee.setIsActive(true); // 新規登録時はアクティブ
+
+        // 2. パスワードをハッシュ化
+        if (request.getPassword() != null && !request.getPassword().isEmpty()) {
+            String hashedPassword = passwordEncoder.encode(request.getPassword());
             employee.setPassword(hashedPassword);
+        } else {
+            throw new IllegalArgumentException("パスワードは必須です。");
         }
 
         employee.setHireDate(java.time.LocalDate.now());
-        employeeRepository.save(employee);
+
+        // 3. Employeeテーブルに保存
+        Employee savedEmployee = employeeRepository.save(employee);
+
+        // 4. EmployeeRoleテーブルに役割を割り当て
+        assignDefaultRole(savedEmployee, request.getRoleId());
     }
 
     /**
@@ -94,7 +136,7 @@ public class EmployeeService {
      * キーワードがnullまたは空の場合は全件取得します。
      *
      * @param keyword 検索キーワード（任意）
-     * @param limit     最大表示件数
+     * @param limit   最大表示件数
      * @return 従業員DTOリスト
      */
     public List<EmployeeDto> searchEmployees(String keyword, int limit) {
@@ -128,13 +170,12 @@ public class EmployeeService {
     public EmployeeDto updateEmployee(String employeeId, EmployeeDto dto) { // ★ 引数名を統一
         Employee emp = employeeRepository.findById(employeeId).orElseThrow(() -> new RuntimeException("従業員が見つかりません"));
         // employeeIdは主キーなので通常は変更しないが、DTOに含まれている場合は更新
-        if (!emp.getEmployeeId().equals(dto.getEmployeeId())) {
+        if (dto.getEmployeeId() != null && !emp.getEmployeeId().equals(dto.getEmployeeId())) {
             throw new IllegalArgumentException("従業員IDは変更できません。");
         }
 
         emp.setName(dto.getName());
         emp.setDepartment(dto.getDepartment());
-        // emp.setEmployeeId(dto.getEmployeeId()); // 主キーの再設定は不要
         emp.setIsActive(dto.isActive());
         emp.setEmail(dto.getEmail());
 

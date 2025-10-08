@@ -81,7 +81,7 @@ function applyFiltersAndRenderTable(logs) {
         const statusText = isCompleted ? '完了' : '未完了';
 
         const actions = `
-            <button class="small-btn edit-btn" data-employee-id="${dayLog.employeeId}"><i class="fas fa-pen"></i> 修正依頼</button>
+            <button class="small-btn edit-btn" data-employee-id="${dayLog.employeeId}"><i class="fas fa-pen"></i> 修正</button>
         `;
 
         // 休憩の列を1つに統合 (breakText)
