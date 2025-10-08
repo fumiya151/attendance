@@ -181,6 +181,27 @@ public class EmployeeService {
 
         // パスワードは更新DTOに含まれないことが多いため、ここでは処理しない
 
+        // Role update logic
+        if (dto.getRoleId() != null) {
+            Role newRole = roleRepository.findById(dto.getRoleId())
+                    .orElseThrow(() -> new RuntimeException("指定された役割IDが見つかりません: " + dto.getRoleId()));
+
+            List<EmployeeRole> employeeRoles = employeeRoleRepository.findByEmployeeId(employeeId);
+            if (employeeRoles.isEmpty()) {
+                // If no role is assigned, create a new one
+                EmployeeRole newEmployeeRole = new EmployeeRole();
+                newEmployeeRole.setEmployeeId(employeeId);
+                newEmployeeRole.setRole(newRole);
+                employeeRoleRepository.save(newEmployeeRole);
+            } else {
+                // If a role is already assigned, update it
+                // Assuming one role per employee as per UI
+                EmployeeRole employeeRole = employeeRoles.get(0);
+                employeeRole.setRole(newRole);
+                employeeRoleRepository.save(employeeRole);
+            }
+        }
+
         employeeRepository.save(emp);
         return convertToDto(emp);
     }
@@ -210,6 +231,7 @@ public class EmployeeService {
      */
     @Transactional
     public void deleteEmployee(String employeeId) { // ★ 引数名を統一
+        employeeRoleRepository.deleteByEmployeeId(employeeId);
         employeeRepository.deleteById(employeeId);
     }
 }

@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', async () => {
     const form = document.getElementById('employee-edit-form');
     const urlParams = new URLSearchParams(window.location.search);
-    const employeeId = urlParams.get('employeeId');
+    const employeeId = urlParams.get('id');
 
     if (!employeeId) {
         alert('従業員IDが指定されていません。');
@@ -22,7 +22,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         // フォームに値を設定
         form.employeeId.value = employee.employeeId;
         form.name.value = employee.name;
-        form.department.value = employee.department;
+        
+        const roleSelect = form.roleSelect;
+        const options = Array.from(roleSelect.options);
+        const optionToSelect = options.find(option => option.dataset.department === employee.department);
+        if (optionToSelect) {
+            optionToSelect.selected = true;
+        }
+
         form.email.value = employee.email || '';
         form.querySelector(`input[name="isActive"][value="${String(employee.active)}"]`).checked = true;
 
@@ -35,14 +42,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     form.addEventListener('submit', (e) => {
         e.preventDefault();
 
+        const selectedOption = form.roleSelect.options[form.roleSelect.selectedIndex];
         // 編集後のデータをオブジェクトとしてまとめる
         const editedEmployeeData = {
             id: employeeId,
             employeeId: form.employeeId.value,
             name: form.name.value,
-            department: form.department.value,
+            department: selectedOption.dataset.department,
             email: form.email.value,
-            active: form.querySelector('input[name="isActive"]:checked').value === 'true'
+            active: form.querySelector('input[name="isActive"]:checked').value === 'true',
+            roleId: form.roleSelect.value
         };
 
         // セッションストレージに保存

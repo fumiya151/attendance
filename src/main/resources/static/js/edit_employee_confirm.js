@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const tbody = document.getElementById('confirmation-tbody');
     const fields = [
         { key: 'name', label: '氏名' },
-        { key: 'department', label: '部署' },
+        { key: 'department', label: '役職（権限）' },
         { key: 'email', label: 'メールアドレス' },
         { key: 'active', label: '在職状況' }
     ];

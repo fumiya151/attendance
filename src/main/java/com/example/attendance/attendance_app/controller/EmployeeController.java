@@ -4,8 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import com.example.attendance.attendance_app.dto.EmployeeDto;
-import com.example.attendance.attendance_app.dto.EmployeeRegistrationRequest; // 変更点: 新しいDTOをインポート
-import com.example.attendance.attendance_app.model.Employee;
+import com.example.attendance.attendance_app.dto.EmployeeRegistrationRequest;
 import com.example.attendance.attendance_app.service.EmployeeService;
 
 import java.util.List;

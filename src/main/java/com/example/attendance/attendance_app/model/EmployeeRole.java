@@ -17,10 +17,10 @@ public class EmployeeRole {
 
     // Primary Key: BIGSERIAL (Database auto-generated)
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY) // ★ 修正済み: 自動採番戦略
+    @GeneratedValue(strategy = GenerationType.IDENTITY) // 自動採番戦略
     private Long id;
 
-    // 従業員ID (外部キーではないが、論理的にEmployeeを参照)
+    // 従業員ID (割り当て対象)
     @Column(name = "employee_id", length = 20, nullable = false)
     private String employeeId;
 
@@ -29,13 +29,32 @@ public class EmployeeRole {
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
 
+    // 割り当て日時（作成日時）
     @Column(name = "assigned_at")
     private OffsetDateTime assignedAt;
 
-    @PrePersist
+    // ★ 追加点: 最終更新日時
+    @Column(name = "updated_at")
+    private OffsetDateTime updatedAt;
+
+    // ★ 追加点: 最終更新を行った従業員のID
+    @Column(name = "updated_by_employee_id", length = 20)
+    private String updatedByEmployeeId;
+
+    @PrePersist // 挿入前
     protected void onCreate() {
         if (this.assignedAt == null) {
             this.assignedAt = OffsetDateTime.now();
         }
+        // 作成時にも更新日時を設定
+        this.updatedAt = OffsetDateTime.now();
+        // NOTE: updatedByEmployeeId (作成者ID) はService層でセットされる必要があります。
+    }
+
+    @PreUpdate // 更新前
+    protected void onUpdate() {
+        // 更新日時を現在時刻に設定
+        this.updatedAt = OffsetDateTime.now();
+        // NOTE: updatedByEmployeeId (更新者ID) はService層でセットされる必要があります。
     }
 }

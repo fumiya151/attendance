@@ -132,4 +132,3 @@ form.addEventListener('submit', async (e) => {
         alert('通信エラー');
     }
 });
-// ...existing code...

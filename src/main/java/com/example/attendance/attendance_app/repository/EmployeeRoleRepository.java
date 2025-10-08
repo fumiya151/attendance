@@ -15,4 +15,6 @@ public interface EmployeeRoleRepository extends JpaRepository<EmployeeRole, Long
      * @return 役割割当エンティティのリスト
      */
     List<EmployeeRole> findByEmployeeId(String employeeId);
+
+    void deleteByEmployeeId(String employeeId);
 }

@@ -9,4 +9,5 @@ public class EmployeeDto {
     private String email;
     private String department;
     private boolean active;
+    private Long roleId;
 }
