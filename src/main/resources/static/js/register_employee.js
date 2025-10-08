@@ -6,6 +6,19 @@ function showMessage(message, isError = false) {
     messageBox.className = isError ? 'is-error' : 'is-success';
 }
 
+/**
+ * ログイン中の従業員IDをセッションストレージから取得する
+ * (この関数は、他のファイルで定義されているか、このファイルに追加されている必要があります)
+ * @returns {string} ログイン従業員ID。見つからない場合はエラーを投げる。
+ */
+function getLoggedInEmployeeId() {
+    const employeeId = sessionStorage.getItem('loggedInEmployeeId'); 
+    if (!employeeId) {
+        throw new Error("操作を行う従業員IDが見つかりません。ログインが必要です。");
+    }
+    return employeeId;
+}
+
 // 新規従業員登録フォーム送信
 const form = document.getElementById('employee-register-form');
 form.addEventListener('submit', async (e) => {
@@ -45,9 +58,14 @@ form.addEventListener('submit', async (e) => {
     };
 
     try {
+        const operatorId = getLoggedInEmployeeId(); // ★ 修正点1: ログインIDを取得
+        
         const res = await fetch('/api/employees', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-Operator-Id': operatorId // ★ 修正点2: 必須ヘッダーを追加
+            },
             body: JSON.stringify(data)
         });
 
@@ -62,7 +80,12 @@ form.addEventListener('submit', async (e) => {
             showMessage('❌ 登録失敗: ' + (err.message || '不明なエラーが発生しました。'), true);
         }
     } catch (err) {
-        console.error(err);
-        showMessage('❌ 通信エラー: サーバーに接続できませんでした。', true);
+        if (err.message.includes("操作を行う従業員IDが見つかりません")) {
+            // getLoggedInEmployeeId()から throw されたエラーの場合
+            showMessage(`❌ ${err.message} 登録できませんでした。`, true);
+        } else {
+             console.error(err);
+             showMessage('❌ 通信エラー: サーバーに接続できませんでした。', true);
+        }
     }
 });

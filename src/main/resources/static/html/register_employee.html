@@ -15,7 +15,6 @@
     <div class="register-employee-bg">
         <div class="register-employee-card">
             <h2 class="register-employee-title">新規従業員登録</h2>
-            <div id="message-box"></div> <!-- メッセージボックスを追加 -->
             <form id="employee-register-form" class="register-employee-form">
                 <label for="employeeId" class="input-label">従業員ID</label>
                 <input type="text" id="employeeId" name="employeeId" class="input-info" required>
@@ -42,6 +41,7 @@
 
                 <label for="passwordConfirm" class="input-label">パスワード再入力</label>
                 <input type="password" id="passwordConfirm" name="passwordConfirm" class="input-info" required>
+                <div id="message-box"></div>
 
                 <button type="submit" class="primary-btn">登録</button>
             </form>
