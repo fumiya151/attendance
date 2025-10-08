@@ -3,21 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>勤怠管理システム - ログイン</title>
+    <title>勤怠管理システム - 管理画面</title>
     <link rel="stylesheet" href="../css/login.css">
 </head>
 <body>
     <div class="login-container">
         <div class="login-box">
-            <h1 class="login-title">勤怠管理</h1>
-            <div class="tab-container">
-                <div class="tab-item active" data-role="user">打刻画面</div>
-                <div class="tab-item" data-role="admin">管理者画面</div>
-            </div>
+            <h1 class="login-title">管理画面ログイン</h1>
             <form id="login-form">
-                <input type="hidden" id="login-role" name="role" value="user">
+                <input type="hidden" id="login-role" name="role" value="admin">
+
                 <div class="input-group">
-                    <label for="username">ユーザーID</label>
+                    <label for="username">ID</label>
                     <input type="text" id="username" name="username" required>
                 </div>
                 <div class="input-group">

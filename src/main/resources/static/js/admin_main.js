@@ -1,3 +1,11 @@
+function getLoggedInEmployeeId() {
+    const employeeId = sessionStorage.getItem('id'); 
+    if (!employeeId) {
+        throw new Error("操作を行う従業員IDが見つかりません。");
+    }
+    return employeeId;
+}
+
 // 従業員一覧取得＆テーブル描画
 async function fetchAndRenderEmployees() {
     try {
@@ -129,8 +137,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (confirm(`従業員コード: ${employeeId} の従業員情報を本当に削除しますか？`)) {
                     try {
+                        const operatorId = getLoggedInEmployeeId(); // ★ 修正: ログインIDを取得
+                        
                         const res = await fetch(`/api/employees/${employeeId}`, {
                             method: 'DELETE',
+                            headers: {
+                                // ★ 修正: 削除操作のヘッダーを追加
+                                'X-Operator-Id': operatorId
+                            }
                         });
                         if (res.ok) {
                             alert('従業員情報を削除しました。');
@@ -139,7 +153,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             throw new Error('削除に失敗しました。');
                         }
                     } catch (err) {
-                        alert(err.message);
+                        // getLoggedInEmployeeId()のエラーもここでキャッチされます
+                        alert(`処理に失敗しました: ${err.message}`);
                     }
                 }
             }

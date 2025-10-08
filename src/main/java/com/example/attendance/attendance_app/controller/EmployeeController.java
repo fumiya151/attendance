@@ -16,21 +16,23 @@ public class EmployeeController {
 
     private final EmployeeService employeeService;
 
+    // ★ 定数としてヘッダー名を定義しておくと便利です
+    private static final String OPERATOR_HEADER = "X-Operator-Id";
+
     /**
      * 従業員登録APIのエンドポイントです.
      *
-     * 【機能】
-     * 新規従業員情報と役割を登録します。
-     *
-     * 【注意事項】
-     * パスワードはハッシュ化されて保存されます。
-     *
-     * @param request 従業員登録リクエスト (EmployeeRegistrationRequest DTO)
+     * @param request    従業員登録リクエスト (EmployeeRegistrationRequest DTO)
+     * @param operatorId 登録操作を行った従業員ID (ヘッダーから取得)
      * @return 登録結果メッセージ
      */
     @PostMapping
-    public String registerEmployee(@RequestBody EmployeeRegistrationRequest request) { // 変更点: DTOを使用
-        employeeService.registerEmployee(request); // 変更点: DTOをServiceに渡す
+    public String registerEmployee(
+            @RequestBody EmployeeRegistrationRequest request,
+            @RequestHeader(OPERATOR_HEADER) String operatorId) { // ★ 修正点: ヘッダーから操作者IDを取得
+
+        // ★ 修正点: Serviceに操作者IDを渡す
+        employeeService.registerEmployee(request, operatorId);
         return "登録しました";
     }
 
@@ -39,9 +41,6 @@ public class EmployeeController {
      *
      * 【機能】
      * 従業員情報を全件取得し返却します。
-     *
-     * 【注意事項】
-     * 特になし
      *
      * @return 従業員DTOリスト
      */
@@ -53,12 +52,6 @@ public class EmployeeController {
 
     /**
      * 従業員一覧取得API（3件制限）
-     *
-     * 【機能】
-     * 従業員情報を最大3件まで取得し返却します。
-     *
-     * 【注意事項】
-     * 特になし
      *
      * @return 従業員DTOリスト
      */
@@ -75,43 +68,35 @@ public class EmployeeController {
      * @return 従業員DTO
      */
     @GetMapping("/{id}")
-    public EmployeeDto getEmployeeById(@PathVariable("id") String employeeId) { // ★ 修正: 明示的に "id" を指定
+    public EmployeeDto getEmployeeById(@PathVariable("id") String employeeId) {
         return employeeService.getEmployeeById(employeeId);
     }
 
     /**
      * 従業員編集APIのエンドポイントです.
      *
-     * 【機能】
-     * 指定IDの従業員情報を更新します。
-     *
-     * 【注意事項】
-     * 特になし
-     *
      * @param employeeId 従業員ID
-     * @param dto               更新内容（DTO）
+     * @param dto                      更新内容（DTO）
+     * @param updaterId  更新操作を行った従業員ID (ヘッダーから取得)
      * @return 更新後の従業員DTO
      */
     @PutMapping("/{id}")
-    public EmployeeDto updateEmployee(@PathVariable("id") String employeeId, @RequestBody EmployeeDto dto) { // ★ 修正:
-        // 明示的に
-        // "id" を指定
-        return employeeService.updateEmployee(employeeId, dto);
+    public EmployeeDto updateEmployee(
+            @PathVariable("id") String employeeId,
+            @RequestBody EmployeeDto dto,
+            @RequestHeader(OPERATOR_HEADER) String updaterId) { // ★ 修正点: ヘッダーから更新者IDを取得
+
+        // ★ 修正点: Serviceに更新者IDを渡す
+        return employeeService.updateEmployee(employeeId, dto, updaterId);
     }
 
     /**
      * 従業員削除APIのエンドポイントです.
      *
-     * 【機能】
-     * 指定IDの従業員情報を削除します。
-     *
-     * 【注意事項】
-     * 関連データがある場合は削除時エラーになる可能性があります。
-     *
      * @param employeeId 従業員ID
      */
     @DeleteMapping("/{id}")
-    public void deleteEmployee(@PathVariable("id") String employeeId) { // ★ 修正: 明示的に "id" を指定
+    public void deleteEmployee(@PathVariable("id") String employeeId) {
         employeeService.deleteEmployee(employeeId);
     }
 }

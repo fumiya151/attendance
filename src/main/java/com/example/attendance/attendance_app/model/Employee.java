@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.time.OffsetDateTime; // ★ 追加
 
 @Entity
 @Data
@@ -36,4 +37,34 @@ public class Employee {
 
     @Column(name = "password", length = 255)
     private String password;
+
+    // --- ★ 追加: 監査フィールド ---
+
+    /**
+     * レコード作成日時
+     */
+    @Column(name = "created_at", nullable = false)
+    private OffsetDateTime createdAt;
+
+    /**
+     * レコード最終更新日時
+     */
+    @Column(name = "updated_at", nullable = false)
+    private OffsetDateTime updatedAt;
+
+    // --- ★ 追加: 自動設定ロジック ---
+
+    @PrePersist // 挿入前
+    protected void onCreate() {
+        OffsetDateTime now = OffsetDateTime.now();
+        // 作成時と更新時を同時に設定
+        this.createdAt = now;
+        this.updatedAt = now;
+    }
+
+    @PreUpdate // 更新前
+    protected void onUpdate() {
+        // 更新時に更新日時を現在時刻に設定
+        this.updatedAt = OffsetDateTime.now();
+    }
 }

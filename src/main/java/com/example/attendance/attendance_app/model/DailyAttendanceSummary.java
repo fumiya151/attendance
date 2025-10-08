@@ -95,6 +95,26 @@ public class DailyAttendanceSummary {
     @Column(name = "calculated_at")
     private OffsetDateTime calculatedAt;
 
+    // --- ★ 追加: 監査フィールド ---
+
+    /**
+     * 承認操作を行った従業員ID (fk_summary_approved_by)
+     */
+    @Column(name = "approved_by_id", length = 20)
+    private String approvedById;
+
+    /**
+     * 勤怠が承認された日時
+     */
+    @Column(name = "approved_at")
+    private OffsetDateTime approvedAt;
+
+    /**
+     * 最終集計または修正操作を行った従業員ID (fk_summary_updated_by)
+     */
+    @Column(name = "updated_by_id", length = 20)
+    private String updatedById;
+
     // ※ Employeeとの@ManyToOne関係は、集計テーブルではパフォーマンスのため省略することが多いですが、
     // 必要に応じて employeeId を利用して別途取得します。
 }

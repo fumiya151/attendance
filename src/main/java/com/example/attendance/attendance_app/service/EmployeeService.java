@@ -24,8 +24,8 @@ public class EmployeeService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
 
-    // 【新規】役割を割り当てるヘルパーメソッド
-    private void assignDefaultRole(Employee employee, Long roleId) {
+    // 修正: 役割を割り当てるヘルパーメソッドに操作者IDを追加
+    private void assignDefaultRole(Employee employee, Long roleId, String operatorId) { // ★ operatorIdを追加
         if (roleId == null) {
             throw new IllegalArgumentException("役割IDは必須です。");
         }
@@ -38,6 +38,8 @@ public class EmployeeService {
         EmployeeRole employeeRole = new EmployeeRole();
         employeeRole.setEmployeeId(employee.getEmployeeId());
         employeeRole.setRole(role);
+        // ★ 修正点: 操作者IDを updatedByEmployeeId にセット
+        employeeRole.setUpdatedByEmployeeId(operatorId);
         employeeRoleRepository.save(employeeRole);
     }
 
@@ -80,6 +82,9 @@ public class EmployeeService {
         // ★ 修正点: employee_roleからの参照を削除し、employeeテーブルのdepartmentを使用
         dto.setDepartment(employee.getDepartment());
 
+        // Note: DTOにcreated_at/updated_atなどの監査フィールドを追加することも可能ですが、
+        // 現状のEmployeeDtoに合わせてここでは追加していません。
+
         return dto;
     }
 
@@ -92,10 +97,11 @@ public class EmployeeService {
      * 【注意事項】
      * パスワードはハッシュ化して保存され、役割はemployee_roleテーブルに登録されます。
      *
-     * @param request 従業員登録リクエストDTO
+     * @param request    従業員登録リクエストDTO
+     * @param operatorId 登録操作を行った従業員ID (追加)
      */
     @Transactional
-    public void registerEmployee(EmployeeRegistrationRequest request) {
+    public void registerEmployee(EmployeeRegistrationRequest request, String operatorId) { // ★ operatorIdを追加
         // 主キーの存在チェック
         if (request.getEmployeeId() == null || request.getEmployeeId().isEmpty()) {
             throw new IllegalArgumentException("従業員ID（主キー）は必須です。");
@@ -119,11 +125,15 @@ public class EmployeeService {
 
         employee.setHireDate(java.time.LocalDate.now());
 
+        // Note: created_at, updated_at は Employeeエンティティの @PrePersist で自動設定されるため、
+        // ここで手動でセットする必要はありません。
+
         // 3. Employeeテーブルに保存
         Employee savedEmployee = employeeRepository.save(employee);
 
         // 4. EmployeeRoleテーブルに役割を割り当て
-        assignDefaultRole(savedEmployee, request.getRoleId());
+        // ★ 修正点: operatorId を assignDefaultRole に渡す
+        assignDefaultRole(savedEmployee, request.getRoleId(), operatorId);
     }
 
     /**
@@ -136,7 +146,7 @@ public class EmployeeService {
      * キーワードがnullまたは空の場合は全件取得します。
      *
      * @param keyword 検索キーワード（任意）
-     * @param limit   最大表示件数
+     * @param limit     最大表示件数
      * @return 従業員DTOリスト
      */
     public List<EmployeeDto> searchEmployees(String keyword, int limit) {
@@ -163,12 +173,14 @@ public class EmployeeService {
      * 特になし
      *
      * @param employeeId 従業員ID
-     * @param dto        更新内容（DTO）
+     * @param dto               更新内容（DTO）
+     * @param updaterId  更新操作を行った従業員ID (追加)
      * @return 更新後の従業員DTO
      */
     @Transactional
-    public EmployeeDto updateEmployee(String employeeId, EmployeeDto dto) { // ★ 引数名を統一
+    public EmployeeDto updateEmployee(String employeeId, EmployeeDto dto, String updaterId) { // ★ updaterIdを追加
         Employee emp = employeeRepository.findById(employeeId).orElseThrow(() -> new RuntimeException("従業員が見つかりません"));
+
         // employeeIdは主キーなので通常は変更しないが、DTOに含まれている場合は更新
         if (dto.getEmployeeId() != null && !emp.getEmployeeId().equals(dto.getEmployeeId())) {
             throw new IllegalArgumentException("従業員IDは変更できません。");
@@ -179,7 +191,8 @@ public class EmployeeService {
         emp.setIsActive(dto.isActive());
         emp.setEmail(dto.getEmail());
 
-        // パスワードは更新DTOに含まれないことが多いため、ここでは処理しない
+        // Note: updated_at は Employeeエンティティの @PreUpdate で自動設定されるため、
+        // ここで手動でセットする必要はありません。
 
         // Role update logic
         if (dto.getRoleId() != null) {
@@ -192,16 +205,21 @@ public class EmployeeService {
                 EmployeeRole newEmployeeRole = new EmployeeRole();
                 newEmployeeRole.setEmployeeId(employeeId);
                 newEmployeeRole.setRole(newRole);
+                // ★ 修正点: updaterId をセット
+                newEmployeeRole.setUpdatedByEmployeeId(updaterId);
                 employeeRoleRepository.save(newEmployeeRole);
             } else {
                 // If a role is already assigned, update it
                 // Assuming one role per employee as per UI
                 EmployeeRole employeeRole = employeeRoles.get(0);
                 employeeRole.setRole(newRole);
+                // ★ 修正点: updaterId をセット
+                employeeRole.setUpdatedByEmployeeId(updaterId);
                 employeeRoleRepository.save(employeeRole);
             }
         }
 
+        // EmployeeRepository.save(emp) が呼ばれることで、@PreUpdate が発動し、updated_atが更新されます。
         employeeRepository.save(emp);
         return convertToDto(emp);
     }
@@ -212,7 +230,7 @@ public class EmployeeService {
      * @param employeeId 従業員ID
      * @return 従業員DTO
      */
-    public EmployeeDto getEmployeeById(String employeeId) { // ★ 引数名を統一
+    public EmployeeDto getEmployeeById(String employeeId) {
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("従業員が見つかりません"));
         return convertToDto(employee);
@@ -230,7 +248,7 @@ public class EmployeeService {
      * @param employeeId 従業員ID
      */
     @Transactional
-    public void deleteEmployee(String employeeId) { // ★ 引数名を統一
+    public void deleteEmployee(String employeeId) {
         employeeRoleRepository.deleteByEmployeeId(employeeId);
         employeeRepository.deleteById(employeeId);
     }
