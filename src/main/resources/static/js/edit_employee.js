@@ -1,7 +1,9 @@
 document.addEventListener('DOMContentLoaded', async () => {
     const form = document.getElementById('employee-edit-form');
     const urlParams = new URLSearchParams(window.location.search);
-    const employeeId = urlParams.get('id');
+    
+    // ★ 修正点: URLパラメータのキーを 'id' から 'employeeId' に変更 ★
+    const employeeId = urlParams.get('employeeId');
 
     if (!employeeId) {
         alert('従業員IDが指定されていません。');
@@ -45,8 +47,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const selectedOption = form.roleSelect.options[form.roleSelect.selectedIndex];
         // 編集後のデータをオブジェクトとしてまとめる
         const editedEmployeeData = {
-            id: employeeId,
-            employeeId: form.employeeId.value,
+            // Note: editedData.id は不要だが、前のロジックを踏襲して employeeId を使用
+            employeeId: form.employeeId.value, 
             name: form.name.value,
             department: selectedOption.dataset.department,
             email: form.email.value,

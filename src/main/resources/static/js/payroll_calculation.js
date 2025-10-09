@@ -1,3 +1,13 @@
+// ログイン中の従業員IDをセッションストレージから取得する関数 (共通JSファイルに存在することを前提)
+function getLoggedInEmployeeId() {
+    const employeeId = sessionStorage.getItem('loggedInEmployeeId'); 
+    if (!employeeId) {
+        throw new Error("操作を行う従業員IDが見つかりません。ログインが必要です。");
+    }
+    return employeeId;
+}
+
+
 document.addEventListener('DOMContentLoaded', function () {
     const calculateBtn = document.getElementById('calculate-btn');
     const tableBody = document.getElementById('payroll-table-body');
@@ -19,9 +29,8 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         const [year, month] = periodString.split('-').map(Number);
         
-        // Date.UTC() を使用し、タイムゾーンのズレを回避
+        // Date.UTC() を使用し、タイムゾーンのズレを回避 (ISO形式 YYYY-MM-DD)
         const startDate = new Date(Date.UTC(year, month - 1, 1)).toISOString().split('T')[0];
-        // 翌月の0日目 (月末日) を取得
         const endDate = new Date(Date.UTC(year, month, 0)).toISOString().split('T')[0];
         
         return { startDate, endDate };
@@ -39,12 +48,16 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(response => {
                 if (!response.ok) {
                     return response.text().then(text => { 
+                        // エラーレスポンスを詳細に解析
                         let errorMsg = 'サーバー側で予期せぬエラーが発生しました。';
                         try {
                             const jsonError = JSON.parse(text);
+                            // Spring BootのWARNログ (時給なし) がJSON形式で返ることはないため、
+                            // 通常のControllerエラーレスポンスの 'message' を利用
                             if (jsonError.message) errorMsg = jsonError.message;
                         } catch (e) {}
-                        throw new Error(errorMsg || '計算に失敗しました。');
+                        // 4xx, 5xx ステータスの場合
+                        throw new Error(errorMsg || `計算に失敗しました (Status: ${response.status})`); 
                     });
                 }
                 return response.json();
@@ -52,17 +65,19 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(data => {
                 tableBody.innerHTML = '';
                 if (data.length === 0) {
-                    tableBody.innerHTML = '<tr><td colspan="4">計算対象の従業員が見つかりません。期間と時給設定を確認してください。</td></tr>';
+                    // ★ 修正: エラーログ WARN で除外されたケースを考慮したメッセージに更新
+                    tableBody.innerHTML = '<tr><td colspan="4">給与計算対象の従業員が見つかりません。期間内の**確定済み勤怠**または**有効な時給設定**を確認してください。</td></tr>';
                     return;
                 }
                 
                 data.forEach(payroll => {
+                    const employeeName = payroll.employeeName || payroll.employeeId; // ★ 修正: 名前がない場合のフォールバック
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${payroll.employeeId}</td>
-                        <td>${payroll.employeeName}</td>
+                        <td>${employeeName}</td>
                         <td>${payroll.totalHours.toFixed(2)}</td>
-                        <td>${Math.round(payroll.calculatedSalary).toLocaleString()}</td>
+                        <td>¥${Math.round(payroll.calculatedSalary).toLocaleString()}</td>
                     `;
                     tableBody.appendChild(row);
                 });
@@ -94,10 +109,10 @@ document.addEventListener('DOMContentLoaded', function () {
             tableBody.innerHTML = '<tr><td colspan="4" style="color: orange;">⚠️ URLから無効な期間情報が渡されました。</td></tr>';
         }
     } else {
-         // URLパラメータがない場合、計算ボタンクリックを待つ
+       // URLパラメータがない場合、計算ボタンクリックを待つ
         tableBody.innerHTML = '<tr><td colspan="4">集計期間を選択し、「集計実行」ボタンを押してください。</td></tr>';
         
-        // ★ 期間が未設定の場合、入力フィールドに今月の日付を初期設定する (ユーザー利便性のため)
+        // ★ 期間が未設定の場合、入力フィールドに今月の日付を初期設定する
         const today = new Date();
         const firstDay = new Date(Date.UTC(today.getFullYear(), today.getMonth(), 1)).toISOString().split('T')[0];
         const lastDay = new Date(Date.UTC(today.getFullYear(), today.getMonth() + 1, 0)).toISOString().split('T')[0];
@@ -112,6 +127,11 @@ document.addEventListener('DOMContentLoaded', function () {
     if (calculateBtn) {
         // ★ 2. 画面上のボタンが押された場合、入力フィールドの値で計算を再実行
         calculateBtn.addEventListener('click', () => {
+            // バリデーションチェック
+            if (!startDateInput.value || !endDateInput.value) {
+                 alert("開始日と終了日を入力してください。");
+                 return;
+            }
             fetchAndDisplayPayroll(startDateInput.value, endDateInput.value);
         });
     }

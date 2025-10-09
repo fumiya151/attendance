@@ -36,11 +36,9 @@ public class PayrollController {
      */
     @GetMapping("/calculate")
     public ResponseEntity<List<PayrollDto>> calculatePayroll(
-            // ★ 修正箇所：期間パラメータを受け取る
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
 
-        // ★ 修正箇所：サービス層に期間を渡す
         List<PayrollDto> payrolls = payrollService.calculatePayroll(startDate, endDate);
 
         return ResponseEntity.ok(payrolls);

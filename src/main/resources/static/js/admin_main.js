@@ -1,5 +1,5 @@
 function getLoggedInEmployeeId() {
-    const employeeId = sessionStorage.getItem('id'); 
+    const employeeId = sessionStorage.getItem('loggedInEmployeeId'); 
     if (!employeeId) {
         throw new Error("操作を行う従業員IDが見つかりません。");
     }

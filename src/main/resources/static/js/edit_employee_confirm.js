@@ -1,6 +1,20 @@
+// ログイン中の従業員IDをセッションストレージから取得する関数 (共通JSファイルに存在することを前提)
+function getLoggedInEmployeeId() {
+    const employeeId = sessionStorage.getItem('loggedInEmployeeId'); 
+    if (!employeeId) {
+        // IDが取れない場合は明確にエラーを投げる
+        throw new Error("操作を行う従業員IDが見つかりません。");
+    }
+    return employeeId;
+}
+
+
 document.addEventListener('DOMContentLoaded', () => {
     const originalData = JSON.parse(sessionStorage.getItem('originalEmployeeData'));
     const editedData = JSON.parse(sessionStorage.getItem('editedEmployeeData'));
+    
+    // Note: editedData.id は前の画面から渡すIDが employeeId に統一されたため、
+    // editedData.employeeId を使用する方が安全だが、ここでは前のロジックを踏襲する。
 
     if (!originalData || !editedData) {
         alert('確認データが見つかりません。');
@@ -46,9 +60,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // 「確定」ボタン
     document.getElementById('confirm-btn').addEventListener('click', async () => {
         try {
-            const res = await fetch(`/api/employees/${editedData.id}`, {
+            // ★ 修正点1: ログインIDを取得 ★
+            const operatorId = getLoggedInEmployeeId(); 
+
+            // editedData.employeeId が前の画面で正しく設定されていることを前提とする
+            const employeeIdToUpdate = editedData.employeeId; 
+
+            const res = await fetch(`/api/employees/${employeeIdToUpdate}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    // ★ 修正点2: 監査ヘッダーを追加 ★
+                    'X-Operator-Id': operatorId 
+                },
                 body: JSON.stringify(editedData)
             });
 
@@ -59,10 +83,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 sessionStorage.removeItem('editedEmployeeData');
                 window.location.href = 'employee_management.html';
             } else {
-                throw new Error('更新に失敗しました。');
+                 // サーバーからのエラーレスポンスを詳細に表示
+                 const errorData = await res.json();
+                 throw new Error(errorData.message || '更新に失敗しました。');
             }
         } catch (error) {
-            alert(error.message);
+            // ログインID取得エラーもここでキャッチし、ユーザーに伝達
+            alert(`更新処理エラー: ${error.message}`);
         }
     });
 });

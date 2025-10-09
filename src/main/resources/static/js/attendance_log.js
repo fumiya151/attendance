@@ -40,6 +40,7 @@ document.addEventListener('DOMContentLoaded', function () {
             try {
                 const approverId = getLoggedInEmployeeId(); 
                 
+                // API呼び出し: POST /api/summaries/approve/batch
                 const res = await fetch(`/api/summaries/approve/batch?startDate=${startDate}&endDate=${endDate}`, {
                     method: 'POST',
                     headers: {
@@ -54,6 +55,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     // 承認後に画面を更新してステータス変更を反映
                     fetchAndDisplaySummaries(); 
                 } else {
+                    // サーバーからのエラーメッセージ（401 Unauthorized, 403 Forbiddenなど）を処理
                     throw new Error(data.message || '承認処理中に不明なエラーが発生しました。');
                 }
             } catch (error) {
@@ -135,6 +137,16 @@ function applyFiltersAndRenderTable(summaries) {
         tableBody.innerHTML = `<tr><td colspan="8">該当する勤怠サマリーがありません。</td></tr>`;
         return;
     }
+    
+    // ★ 時刻整形ヘルパー関数を定義 ★
+    const formatTime = (timeString) => {
+        if (!timeString) return '---';
+        
+        // 取得した LocalTime 文字列 (例: 12:36:33.396) からミリ秒部分 (.396) を削除
+        const parts = timeString.split('.');
+        return parts[0]; // 結果: 12:36:33
+    };
+
 
     summaries.forEach(sum => {
         const row = document.createElement('tr');
@@ -152,7 +164,7 @@ function applyFiltersAndRenderTable(summaries) {
             approvalClass = 'status-pending';
         } else {
             approvalText = approvalStatus;
-            approvalClass = 'status-adjusted'; // その他
+            approvalClass = 'status-adjusted'; 
         }
 
         // アクションボタン: APPROVED/FINALIZED でなければ承認ボタンを表示
@@ -162,14 +174,14 @@ function applyFiltersAndRenderTable(summaries) {
             `<button class="small-btn secondary-btn" data-id="${sum.id}">詳細</button>`;
 
 
-        // ★ 8列の描画ロジック ★
+        // ★ 8列の描画ロジックと整形適用 ★
         row.innerHTML = `
             <td>${sum.workDate}</td>
             <td>${sum.employeeName}</td>
-            <td>${sum.actualInTime || '---'}</td>
-            <td>${sum.totalBreakMinutes ? (sum.totalBreakMinutes + '分') : '---'}</td> 
-            <td>${sum.actualOutTime || '---'}</td> 
-            <td>${sum.logStatus || '---'}</td> <td><span class="${approvalClass}">${approvalText}</span></td> <td>${actions}</td>
+            <td>${formatTime(sum.actualInTime)}</td> <td>${sum.totalBreakMinutes ? (sum.totalBreakMinutes + '分') : '---'}</td> 
+            <td>${formatTime(sum.actualOutTime)}</td> <td>${sum.logStatus || '---'}</td> 
+            <td><span class="${approvalClass}">${approvalText}</span></td> 
+            <td>${actions}</td>
         `;
         tableBody.appendChild(row);
     });

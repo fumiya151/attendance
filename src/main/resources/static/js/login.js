@@ -27,26 +27,27 @@ loginForm.addEventListener('submit', async (e) => {
             const employeeId = loginData.employeeId; 
 
             if (!employeeId) {
-                // IDがない場合は致命的なエラーとして処理
                 throw new Error('ログイン成功しましたが、従業員IDが返されませんでした。');
             }
 
+            // IDは正しいキーで保存されている (問題なし)
             sessionStorage.setItem('loggedInEmployeeId', employeeId);
 
+            // ★ 修正点: 遷移先のファイル名を明確化 ★
             if (role === 'user') {
-                window.location.href = 'main.html'; 
+                // 打刻画面へ遷移
+                window.location.href = 'punch.html'; 
             } else if (role === 'admin') {
+                // 管理者画面へ遷移
                 window.location.href = 'admin_main.html'; 
             }
         } else {
-            // ステータスコードが200以外の場合
-            // JSONでエラーレスポンスをパース試みる
+            // ステータスコードが200以外の場合のデバッグ強化ロジックは問題なし
             let errorText = await response.text();
             let errorData = null;
             try {
                 errorData = JSON.parse(errorText);
             } catch (e) {
-                // JSONパース失敗時は、そのままレスポンステキストを使用
                 console.error("Error response was not JSON:", errorText);
             }
 
@@ -54,7 +55,6 @@ loginForm.addEventListener('submit', async (e) => {
             errorMessage.textContent = message;
         }
     } catch (error) {
-        // ネットワークエラーやJSONパース失敗など
         console.error('Fatal Login Error:', error);
         errorMessage.textContent = '致命的な通信エラーが発生しました。サーバーまたはネットワーク接続を確認してください。';
     }
