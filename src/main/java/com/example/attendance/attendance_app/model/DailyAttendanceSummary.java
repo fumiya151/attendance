@@ -115,6 +115,20 @@ public class DailyAttendanceSummary {
     @Column(name = "updated_by_id", length = 20)
     private String updatedById;
 
-    // ※ Employeeとの@ManyToOne関係は、集計テーブルではパフォーマンスのため省略することが多いですが、
-    // 必要に応じて employeeId を利用して別途取得します。
+    // --- ★ 追加: 自動更新ロジック (JPAライフサイクル) ---
+
+    @PrePersist
+    protected void onCreate() {
+        // 新規作成時に集計日時を設定
+        if (this.calculatedAt == null) {
+            this.calculatedAt = OffsetDateTime.now();
+        }
+        // approved_atは承認操作時のみ設定されるため、ここでは設定しない
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        // 更新時に集計日時を更新
+        this.calculatedAt = OffsetDateTime.now();
+    }
 }

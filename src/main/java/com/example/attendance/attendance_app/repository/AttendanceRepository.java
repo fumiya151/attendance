@@ -20,9 +20,10 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
         // 既存のメソッド（全ログ検索用）
         List<Attendance> findByEmployeeEmployeeId(String employeeId);
 
-        // 既存のメソッド（給与計算用）
-        @Query("SELECT a FROM Attendance a WHERE a.stampTime >= :startDateTime AND a.stampTime < :endDateTime")
+        // クエリに employee_id によるフィルタリングを追加
+        @Query("SELECT a FROM Attendance a WHERE a.employee.employeeId = :employeeId AND a.stampTime >= :startDateTime AND a.stampTime < :endDateTime")
         List<Attendance> findByPeriod(
+                        @Param("employeeId") String employeeId, // ★ パラメータ追加
                         @Param("startDateTime") OffsetDateTime startDateTime,
                         @Param("endDateTime") OffsetDateTime endDateTime);
 

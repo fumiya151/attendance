@@ -1,9 +1,76 @@
+// ログイン中の従業員IDをセッションストレージから取得する関数 (共通JSファイルに存在することを前提)
+function getLoggedInEmployeeId() {
+    const employeeId = sessionStorage.getItem('loggedInEmployeeId'); 
+    if (!employeeId) {
+        throw new Error("操作を行う従業員IDが見つかりません。ログインが必要です。");
+    }
+    return employeeId;
+}
+
+
 document.addEventListener('DOMContentLoaded', function () {
     fetchAndDisplayAttendanceLogs();
     
-    // 【追加】検索ボタンにイベントリスナーを設定
+    // 【既存】検索ボタンにイベントリスナーを設定
     const searchButton = document.querySelector('#search-button');
     searchButton.addEventListener('click', handleSearch);
+    
+    // ----------------------------------------------------
+    // ★ 修正点: 一括承認ボタンのイベントリスナーを追加
+    // ----------------------------------------------------
+    const approveBtn = document.getElementById('batch-approve-btn');
+    const startDateInput = document.getElementById('approval-start-date');
+    const endDateInput = document.getElementById('approval-end-date');
+
+    if (approveBtn && startDateInput && endDateInput) {
+        approveBtn.addEventListener('click', async () => {
+            const startDate = startDateInput.value;
+            const endDate = endDateInput.value;
+            
+            if (!startDate || !endDate) {
+                alert("承認期間を正しく入力してください（例: YYYY-MM-DD）。");
+                return;
+            }
+
+            if (!confirm(`${startDate}から${endDate}までの全従業員の勤怠データ（未承認分）を承認済みにします。よろしいですか？\n(承認後は給与計算の対象となり、修正が困難になります)`)) {
+                return;
+            }
+
+            try {
+                // 監査ヘッダーの取得 (ログインIDが必要)
+                const approverId = getLoggedInEmployeeId(); 
+                
+                // API呼び出し: POST /api/summaries/approve/batch
+                const res = await fetch(`/api/summaries/approve/batch?startDate=${startDate}&endDate=${endDate}`, {
+                    method: 'POST',
+                    headers: {
+                        // 必須: 監査ヘッダーを追加
+                        'X-Operator-Id': approverId 
+                    }
+                });
+
+                const data = await res.json(); // レスポンスJSONを解析
+
+                if (res.ok) {
+                    alert(`✅ 勤怠サマリーを一括承認しました。\n承認件数: ${data.approvedCount}件`);
+                    // 承認処理はログ自体を変更しないが、ステータスが変わったことを通知
+                    // 必要であれば、テーブルを再読み込み
+                    // fetchAndDisplayAttendanceLogs(); 
+                } else {
+                    // サーバーからのエラーメッセージ（401 Unauthorized, 403 Forbiddenなど）を処理
+                    throw new Error(data.message || '承認処理中に不明なエラーが発生しました。');
+                }
+            } catch (error) {
+                if (error.message.includes("操作を行う従業員IDが見つかりません")) {
+                    alert('❌ 承認失敗: ログインセッションが無効です。ログアウトして再度ログインしてください。');
+                } else {
+                    alert(`❌ 承認に失敗しました: ${error.message}`);
+                    console.error("Batch approval error:", error);
+                }
+            }
+        });
+    }
+    // ----------------------------------------------------
 });
 
 // 取得した全ログを保持するためのグローバル変数
@@ -81,7 +148,7 @@ function applyFiltersAndRenderTable(logs) {
         const statusText = isCompleted ? '完了' : '未完了';
 
         const actions = `
-            <button class="small-btn edit-btn" data-employee-id="${dayLog.employeeId}"><i class="fas fa-pen"></i> 修正</button>
+            <button class="small-btn edit-btn" data-employee-id="${dayLog.employeeId}"><i class="fas fa-pen"></i> 修正依頼</button>
         `;
 
         // 休憩の列を1つに統合 (breakText)
@@ -101,7 +168,6 @@ function applyFiltersAndRenderTable(logs) {
 
 /**
  * 勤怠ログを日付と従業員ごとにペアリングし、日報形式に整形する関数 (複数休憩対応版)
- * ※ この関数自体に変更はありません
  * @param {Array<Object>} logs - DBから取得した生ログの配列
  * @returns {Array<Object>} 日報形式に整形されたログの配列
  */

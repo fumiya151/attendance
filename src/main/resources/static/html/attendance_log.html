@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>勤怠管理システム - 修正</title>
+    <title>勤怠管理システム - 勤怠ログ/修正</title>
     <link rel="stylesheet" href="../css/common.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="../css/attendance_log.css">
@@ -17,26 +17,31 @@
             <h1 class="logo">勤 怠<br>管 理</h1>
             <nav class="nav-menu">
                 <a href="admin_main.html" class="nav-item" data-target="dashboard">
-                    <i class="fas fa-chart-line"></i> トップ
+                    <span class="nav-icon-wrapper"><i class="fas fa-chart-line"></i></span> 
+                    <span class="nav-text">トップ</span>
                 </a>
                 <a href="employee_management.html" class="nav-item" data-target="employees">
-                    <i class="fas fa-users"></i> 管理
+                    <span class="nav-icon-wrapper"><i class="fas fa-users"></i></span> 
+                    <span class="nav-text">管理</span>
                 </a>
                 <a href="attendance_log.html" class="nav-item active" data-target="attendance-logs">
-                    <i class="fas fa-clock"></i> 修正
+                    <span class="nav-icon-wrapper"><i class="fas fa-clock"></i></span> 
+                    <span class="nav-text">修正</span>
                 </a>
                 <a href="payroll_calculation.html" class="nav-item" data-target="payroll">
-                    <i class="fas fa-calculator"></i> 給与
+                    <span class="nav-icon-wrapper"><i class="fas fa-calculator"></i></span> 
+                    <span class="nav-text">給与</span>
                 </a>
                 <a href="system_settings.html" class="nav-item" data-target="settings">
-                    <i class="fas fa-cogs"></i> 設定
+                    <span class="nav-icon-wrapper"><i class="fas fa-cogs"></i></span> 
+                    <span class="nav-text">設定</span>
                 </a>
             </nav>
         </aside>
 
         <main class="main-content">
             <header class="header">
-                <h2>修正</h2>
+                <h2>勤怠ログ/修正</h2>
                 <div class="user-info">
                     <span>管理者 (Admin)</span>
                     <a href="admin_login.html" class="logout-btn">ログアウト</a>
@@ -44,7 +49,23 @@
             </header>
 
             <section id="attendance-logs" class="content-view">
-                <h3>修正</h3>
+                <h3>日次勤怠サマリー修正・承認</h3>
+                
+                <h4>勤怠承認（給与計算準備）</h4>
+                <div class="action-bar approval-bar">
+                    <label for="approval-start-date">期間:</label>
+                    <input type="date" id="approval-start-date" class="search-input" value="2025-09-01">
+                    <span>〜</span>
+                    <input type="date" id="approval-end-date" class="search-input" value="2025-09-30">
+                    
+                    <button class="primary-btn export-btn" id="batch-approve-btn">
+                        <i class="fas fa-check-double"></i> 期間一括承認
+                    </button>
+                </div>
+                
+                <hr>
+
+                <h4>勤怠ログの検索・修正</h4>
                 <div class="action-bar">
                     <input type="text" id="search-input" placeholder="氏名、日付で検索..." class="search-input">
                     <button class="primary-btn" id="search-button"><i class="fas fa-search"></i> 検索</button>

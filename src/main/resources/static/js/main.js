@@ -110,15 +110,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const attendanceData = {
             employeeId: selectedUserCode,
-            name: selectedUserName,
+            name: selectedUserName, // Controllerのメッセージ作成用に残す
             attendanceType: type
         };
 
         try {
+            // 打刻対象者が操作者IDを兼ねる
+            const operatorId = selectedUserCode; 
+
             const response = await fetch('/api/attendance/stamp', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    // ★ 修正点: 必須ヘッダー X-Operator-Id を追加
+                    'X-Operator-Id': operatorId 
                 },
                 body: JSON.stringify(attendanceData),
             });
@@ -130,7 +135,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 messageArea.className = 'message-box is-success';
                 updateButtonStates(selectedUserCode); // 打刻成功後にボタン状態を更新
             } else {
-                throw new Error(responseText || 'サーバーでエラーが発生しました。');
+                // JSONエラーレスポンスの処理を強化
+                try {
+                    const errorJson = JSON.parse(responseText);
+                    throw new Error(errorJson.message || `サーバーエラーが発生しました (Status: ${response.status})`);
+                } catch {
+                    throw new Error(responseText || `サーバーでエラーが発生しました (Status: ${response.status})`);
+                }
             }
 
         } catch (error) {
