@@ -75,14 +75,4 @@ public class AttendanceController {
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
-
-    /**
-     * 全勤怠取得APIのエンドポイントです.
-     *
-     * @return 全勤怠DTOリスト
-     */
-    @GetMapping("/logs")
-    public List<AttendanceDto> getAttendanceLogs() {
-        return attendanceService.getAllAttendanceLogs();
-    }
 }

@@ -18,7 +18,6 @@ import java.time.ZoneId;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
-import java.util.stream.Collectors;
 import java.util.Comparator;
 
 @Service
@@ -68,7 +67,7 @@ public class AttendanceService {
      * 勤怠記録を登録するメソッドです.
      *
      * @param request    勤怠リクエスト
-     * @param operatorId 勤怠操作を行った従業員ID (打刻処理では通常、request.getEmployeeId()と同じ)
+     * @param operatorId 勤怠操作を行った従業員ID
      * @return 登録された勤怠エンティティ
      */
     @Transactional
@@ -247,16 +246,5 @@ public class AttendanceService {
         dto.setStampType(attendance.getStampType());
         dto.setNote(attendance.getNote());
         return dto;
-    }
-
-    /**
-     * 全ての勤怠ログを取得するメソッドです.
-     *
-     * @return 全勤怠DTOリスト
-     */
-    public List<AttendanceDto> getAllAttendanceLogs() {
-        return attendanceRepository.findAllByOrderByStampTimeDesc().stream()
-                .map(this::convertToDto)
-                .collect(Collectors.toList());
     }
 }
