@@ -44,7 +44,7 @@ public class AttendanceController {
     @PostMapping("/stamp")
     public ResponseEntity<String> recordAttendance(
             @RequestBody AttendanceRequest request,
-            @RequestHeader(OPERATOR_HEADER) String operatorId) { // ★ 修正点: ヘッダーから operatorId を取得
+            @RequestHeader(OPERATOR_HEADER) String operatorId) {
 
         // ★ 修正点: Serviceに operatorId を渡す
         Attendance savedAttendance = attendanceService.recordAttendance(request, operatorId);

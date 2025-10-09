@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const form = document.getElementById('employee-edit-form');
     const urlParams = new URLSearchParams(window.location.search);
     
-    // ★ 修正点: URLパラメータのキーを 'id' から 'employeeId' に変更 ★
+    // URLパラメータのキーを 'id' から 'employeeId' に修正済み
     const employeeId = urlParams.get('employeeId');
 
     if (!employeeId) {
@@ -33,7 +33,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         form.email.value = employee.email || '';
-        form.querySelector(`input[name="isActive"][value="${String(employee.active)}"]`).checked = true;
+        
+        // ★ 削除: 在職状況（isActive）のDOM設定ロジックを削除
+        // form.querySelector(`input[name="isActive"][value="${String(employee.active)}"]`).checked = true;
 
     } catch (error) {
         alert(error.message);
@@ -45,14 +47,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         e.preventDefault();
 
         const selectedOption = form.roleSelect.options[form.roleSelect.selectedIndex];
+        
         // 編集後のデータをオブジェクトとしてまとめる
         const editedEmployeeData = {
             // Note: editedData.id は不要だが、前のロジックを踏襲して employeeId を使用
-            employeeId: form.employeeId.value, 
+            employeeId: employeeId, // employeeIdを正しく設定
             name: form.name.value,
             department: selectedOption.dataset.department,
             email: form.email.value,
-            active: form.querySelector('input[name="isActive"]:checked').value === 'true',
+            // ★ 修正: 在職状況（isActive）のロジックを削除し、DBに依存（true）させる
+            active: true, 
             roleId: form.roleSelect.value
         };
 

@@ -36,7 +36,7 @@ loginForm.addEventListener('submit', async (e) => {
             // ★ 修正点: 遷移先のファイル名を明確化 ★
             if (role === 'user') {
                 // 打刻画面へ遷移
-                window.location.href = 'punch.html'; 
+                window.location.href = 'main.html'; 
             } else if (role === 'admin') {
                 // 管理者画面へ遷移
                 window.location.href = 'admin_main.html'; 

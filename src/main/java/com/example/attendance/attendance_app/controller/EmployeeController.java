@@ -29,16 +29,15 @@ public class EmployeeController {
     @PostMapping
     public String registerEmployee(
             @RequestBody EmployeeRegistrationRequest request,
-            @RequestHeader(OPERATOR_HEADER) String operatorId) { // ★ 修正点: ヘッダーから操作者IDを取得
+            @RequestHeader(OPERATOR_HEADER) String operatorId) {
 
-        // ★ 修正点: Serviceに操作者IDを渡す
         employeeService.registerEmployee(request, operatorId);
         return "登録しました";
     }
 
     /**
      * 従業員一覧取得APIのエンドポイントです.
-     *
+     * 
      * 【機能】
      * 従業員情報を全件取得し返却します。
      *
@@ -76,7 +75,7 @@ public class EmployeeController {
      * 従業員編集APIのエンドポイントです.
      *
      * @param employeeId 従業員ID
-     * @param dto                      更新内容（DTO）
+     * @param dto        更新内容（DTO）
      * @param updaterId  更新操作を行った従業員ID (ヘッダーから取得)
      * @return 更新後の従業員DTO
      */
@@ -84,19 +83,24 @@ public class EmployeeController {
     public EmployeeDto updateEmployee(
             @PathVariable("id") String employeeId,
             @RequestBody EmployeeDto dto,
-            @RequestHeader(OPERATOR_HEADER) String updaterId) { // ★ 修正点: ヘッダーから更新者IDを取得
+            @RequestHeader(OPERATOR_HEADER) String updaterId) {
 
-        // ★ 修正点: Serviceに更新者IDを渡す
         return employeeService.updateEmployee(employeeId, dto, updaterId);
     }
 
     /**
      * 従業員削除APIのエンドポイントです.
      *
+     * 【機能】
+     * 指定IDの従業員情報を削除します。操作者IDをServiceに渡し、監査ロジックに対応します。
+     *
      * @param employeeId 従業員ID
+     * @param operatorId 削除操作を行った従業員ID (ヘッダーから取得)
      */
     @DeleteMapping("/{id}")
-    public void deleteEmployee(@PathVariable("id") String employeeId) {
-        employeeService.deleteEmployee(employeeId);
+    public void deleteEmployee(
+            @PathVariable("id") String employeeId,
+            @RequestHeader(OPERATOR_HEADER) String operatorId) {
+        employeeService.deleteEmployee(employeeId, operatorId);
     }
 }

@@ -52,17 +52,17 @@
                 <div class="action-bar">
                     <input type="text" id="employee-search-input" placeholder="氏名、コードで検索..." class="search-input">
                     <button class="primary-btn" id="employee-search-btn"><i class="fas fa-search"></i> 検索</button>
-                    <a href="register_employee.html" class="primary-btn"><i class="fas fa-plus"></i> 新規従業員登録</a>
+                     <a href="register_employee.html" class="primary-btn"><i class="fas fa-plus"></i> 新規従業員登録</a>
                     <button class="secondary-btn"><i class="fas fa-file-export"></i> CSV出力</button>
                 </div>
 
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>コード</th>
+                            <th>ID</th>
                             <th>氏名</th>
                             <th>役職</th>
-                            <th>在職状況</th>
+                            <th>メールアドレス</th>
                             <th>アクション</th>
                         </tr>
                     </thead>
@@ -70,24 +70,6 @@
                         <!-- ↓ここにJSで従業員一覧を追加 -->
                     </tbody>
                 </table>
-                <!-- 従業員登録モーダル -->
-                <div id="register-modal" class="modal" style="display:none;">
-                    <div class="modal-content">
-                        <span class="close" id="close-register-modal">&times;</span>
-                        <h3>新規従業員登録</h3>
-                        <form id="employee-register-form">
-                            <label for="employeeId">コード</label>
-                            <input type="text" id="employeeId" name="employeeId" required>
-                            <label for="employeeName">氏名</label>
-                            <input type="text" id="employeeName" name="employeeName" required>
-                            <label for="department">部署</label>
-                            <input type="text" id="department" name="department" required>
-                            <label for="password">パスワード</label>
-                            <input type="password" id="password" name="password" required>
-                            <button type="submit" class="primary-btn">登録</button>
-                        </form>
-                    </div>
-                </div>
             </section>
         </main>
     </div>

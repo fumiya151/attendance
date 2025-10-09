@@ -3,7 +3,7 @@ function getLoggedInEmployeeId() {
     const employeeId = sessionStorage.getItem('loggedInEmployeeId'); 
     if (!employeeId) {
         // IDが取れない場合は明確にエラーを投げる
-        throw new Error("操作を行う従業員IDが見つかりません。");
+        throw new Error("操作を行う従業員IDが見つかりません。ログインが必要です。");
     }
     return employeeId;
 }
@@ -13,8 +13,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const originalData = JSON.parse(sessionStorage.getItem('originalEmployeeData'));
     const editedData = JSON.parse(sessionStorage.getItem('editedEmployeeData'));
     
-    // Note: editedData.id は前の画面から渡すIDが employeeId に統一されたため、
-    // editedData.employeeId を使用する方が安全だが、ここでは前のロジックを踏襲する。
+    // editedData.employeeId が前の画面で正しく設定されていることを前提とする
+    // originalData の active 属性は、編集画面で変更されていないため、ここでは表示ロジックから削除する
 
     if (!originalData || !editedData) {
         alert('確認データが見つかりません。');
@@ -23,21 +23,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const tbody = document.getElementById('confirmation-tbody');
+    
+    // active（在職状況）を削除した後の fields 定義
     const fields = [
         { key: 'name', label: '氏名' },
         { key: 'department', label: '役職（権限）' },
         { key: 'email', label: 'メールアドレス' },
-        { key: 'active', label: '在職状況' }
     ];
 
     // 変更点を比較してテーブルを生成
     fields.forEach(field => {
-        const originalValue = field.key === 'active' ? (originalData[field.key] ? '在職中' : '退職') : originalData[field.key];
-        const editedValue = field.key === 'active' ? (editedData[field.key] ? '在職中' : '退職') : editedData[field.key];
+        
+        const originalValue = originalData[field.key];
+        const editedValue = editedData[field.key];
 
         const tr = document.createElement('tr');
+        
+        // ★ 修正済み: <td>タグの重複を解消（初期値） ★
         let beforeCell = `<td>${originalValue}</td>`;
-        let afterCell = `<td>${editedValue}</td>`;
+        let afterCell = `<td>${editedValue}</td>`; 
 
         if (String(originalData[field.key]) !== String(editedData[field.key])) {
             beforeCell = `<td class="diff-removed">${originalValue}</td>`;
@@ -60,17 +64,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // 「確定」ボタン
     document.getElementById('confirm-btn').addEventListener('click', async () => {
         try {
-            // ★ 修正点1: ログインIDを取得 ★
+            // ログインIDを取得（監査ヘッダー用）
             const operatorId = getLoggedInEmployeeId(); 
 
-            // editedData.employeeId が前の画面で正しく設定されていることを前提とする
+            // 更新対象ID (employeeId)
             const employeeIdToUpdate = editedData.employeeId; 
 
             const res = await fetch(`/api/employees/${employeeIdToUpdate}`, {
                 method: 'PUT',
                 headers: { 
                     'Content-Type': 'application/json',
-                    // ★ 修正点2: 監査ヘッダーを追加 ★
+                    // 監査ヘッダー
                     'X-Operator-Id': operatorId 
                 },
                 body: JSON.stringify(editedData)
