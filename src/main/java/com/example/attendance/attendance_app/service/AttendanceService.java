@@ -29,11 +29,32 @@ public class AttendanceService {
     private final DailyAttendanceSummaryRepository summaryRepository;
 
     private static final ZoneId JST_ZONE = ZoneId.of("Asia/Tokyo");
+    // 日の区切りとなる時刻（午前 9:00）を定義
+    private static final LocalTime WORK_DAY_CLOSE_TIME = LocalTime.of(9, 0);
 
     private final String workSt = "出勤";
     private final String workEd = "退勤";
     private final String breakSt = "休憩開始";
     private final String breakEd = "休憩終了";
+
+    /**
+     * 指定された打刻時刻が属する「勤務日」（Work Date）を計算します.
+     * * @param stampTime 打刻時刻
+     * 
+     * @return 計算された勤務日（LocalDate）
+     */
+    private LocalDate getWorkDate(OffsetDateTime stampTime) {
+        // JSTでの日付と時刻を取得
+        LocalDate date = stampTime.atZoneSameInstant(JST_ZONE).toLocalDate();
+        LocalTime time = stampTime.atZoneSameInstant(JST_ZONE).toLocalTime();
+
+        // 打刻時刻が 9:00 JST より前の場合、勤務日は前日となる
+        if (time.isBefore(WORK_DAY_CLOSE_TIME)) {
+            return date.minusDays(1);
+        }
+        // 9:00 JST 以降の場合、勤務日は当日となる
+        return date;
+    }
 
     /**
      * 次に有効な打刻種別リストを返すメソッドです.
@@ -66,7 +87,7 @@ public class AttendanceService {
     /**
      * 勤怠記録を登録するメソッドです.
      *
-     * @param request    勤怠リクエスト
+     * @param request       勤怠リクエスト
      * @param operatorId 勤怠操作を行った従業員ID
      * @return 登録された勤怠エンティティ
      */
@@ -84,7 +105,8 @@ public class AttendanceService {
         Attendance savedAttendance = attendanceRepository.save(attendance);
 
         if (request.getAttendanceType().equals(workEd)) {
-            LocalDate workDate = stampTime.toLocalDate();
+            // 退勤時刻から「勤務日」を計算する
+            LocalDate workDate = getWorkDate(stampTime);
             processCheckoutSummary(request.getEmployeeId(), workDate, operatorId);
         }
 
@@ -95,15 +117,17 @@ public class AttendanceService {
      * 退勤時の日次集計処理とdaily_attendance_summaryへの登録/更新（UPSERT）を行います.
      *
      * @param employeeId 従業員ID
-     * @param workDate     勤務日
+     * @param workDate       勤務日 (9:00締めを考慮して計算済み)
      * @param operatorId 集計を更新した従業員ID
      */
     private void processCheckoutSummary(String employeeId, LocalDate workDate, String operatorId) {
-        OffsetDateTime startOfDay = workDate.atStartOfDay(JST_ZONE).toOffsetDateTime();
-        OffsetDateTime endOfDay = workDate.plusDays(1).atStartOfDay(JST_ZONE).toOffsetDateTime();
+        // 勤務日の 9:00 から、翌日の 9:00 までをログ取得範囲とする
+        OffsetDateTime startOfWorkDay = workDate.atTime(WORK_DAY_CLOSE_TIME).atZone(JST_ZONE).toOffsetDateTime();
+        OffsetDateTime endOfWorkDay = workDate.plusDays(1).atTime(WORK_DAY_CLOSE_TIME).atZone(JST_ZONE)
+                .toOffsetDateTime();
 
         // DB側でemployeeIdによるフィルタリングを行う
-        List<Attendance> logs = attendanceRepository.findByPeriod(employeeId, startOfDay, endOfDay);
+        List<Attendance> logs = attendanceRepository.findByPeriod(employeeId, startOfWorkDay, endOfWorkDay);
 
         DailyAttendanceSummary calculatedSummary = calculateDailySummary(employeeId, workDate, logs);
 
@@ -136,8 +160,8 @@ public class AttendanceService {
      * 打刻ログリストから日次集計オブジェクトを計算・生成します.
      *
      * @param employeeId 従業員ID
-     * @param workDate     勤務日
-     * @param logs             その日の打刻ログ
+     * @param workDate       勤務日
+     * @param logs                   その日の打刻ログ
      * @return 計算結果が格納されたDailyAttendanceSummaryオブジェクト
      */
     private DailyAttendanceSummary calculateDailySummary(String employeeId, LocalDate workDate, List<Attendance> logs) {
@@ -194,9 +218,6 @@ public class AttendanceService {
                 }
             }
         }
-
-        // --- サマリーへのセット ---
-
         summary.setTotalBreakMinutes((int) totalBreakMinutes);
 
         if (firstIn != null && lastOut != null) {
@@ -226,10 +247,15 @@ public class AttendanceService {
      */
     public Optional<AttendanceDto> getLatestAttendance(String employeeId) {
         OffsetDateTime now = OffsetDateTime.now(JST_ZONE);
-        OffsetDateTime startOfDay = now.toLocalDate().atStartOfDay(JST_ZONE).toOffsetDateTime();
+        // 現在時刻から「勤務日」を計算する
+        LocalDate currentWorkDate = getWorkDate(now);
+
+        // 取得範囲を現在の勤務日の開始時刻（9:00）から現在時刻までとする
+        OffsetDateTime startOfWorkDay = currentWorkDate.atTime(WORK_DAY_CLOSE_TIME).atZone(JST_ZONE).toOffsetDateTime();
 
         return attendanceRepository
-                .findTopByEmployeeEmployeeIdAndStampTimeBetweenOrderByStampTimeDesc(employeeId, startOfDay, now)
+                // 勤務日の開始時刻から now までの最新の打刻を取得
+                .findTopByEmployeeEmployeeIdAndStampTimeBetweenOrderByStampTimeDesc(employeeId, startOfWorkDay, now)
                 .map(this::convertToDto);
     }
 

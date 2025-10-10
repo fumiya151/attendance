@@ -1,35 +1,34 @@
 package com.example.attendance.attendance_app.service;
 
 import com.example.attendance.attendance_app.model.DailyAttendanceSummary;
-import com.example.attendance.attendance_app.model.Employee; // ★ 追加
+import com.example.attendance.attendance_app.model.Employee;
 import com.example.attendance.attendance_app.repository.DailyAttendanceSummaryRepository;
-import com.example.attendance.attendance_app.repository.EmployeeRepository; // ★ 追加
-import com.example.attendance.attendance_app.dto.DailyAttendanceSummaryDto; // ★ 追加
+import com.example.attendance.attendance_app.repository.EmployeeRepository;
+import com.example.attendance.attendance_app.dto.DailyAttendanceSummaryDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.List;
-import java.util.Map; // ★ 追加
-import java.util.stream.Collectors; // ★ 追加
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class DailyAttendanceSummaryService {
 
     private final DailyAttendanceSummaryRepository summaryRepository;
-    private final EmployeeRepository employeeRepository; // ★ 従業員名取得のために注入
+    private final EmployeeRepository employeeRepository;
 
     private static final String STATUS_APPROVED = "APPROVED";
     private static final String STATUS_PENDING = "PENDING";
+    private static final ZoneId JST_ZONE = ZoneId.of("Asia/Tokyo");
 
     /**
      * 全期間の勤怠サマリーを従業員名情報と承認ステータス付きで取得します。
-     *
-     * 【機能】
-     * DailyAttendanceSummaryとEmployee情報を結合し、フロントエンドのテーブル描画用DTOに変換します。
      *
      * @return DailyAttendanceSummaryDtoのリスト
      */
@@ -39,7 +38,6 @@ public class DailyAttendanceSummaryService {
                 .collect(Collectors.toMap(Employee::getEmployeeId, Employee::getName));
 
         // 2. 全ての勤怠サマリーを取得
-        // Note: 必要に応じて、ソート順をリポジトリに追加すると便利です (例: findByOrderByWorkDateDesc)
         List<DailyAttendanceSummary> allSummaries = summaryRepository.findAll();
 
         // 3. サマリーと従業員名を結合し、DTOに変換
@@ -62,9 +60,8 @@ public class DailyAttendanceSummaryService {
                     dto.setTotalWorkMinutes(summary.getTotalWorkMinutes());
 
                     // ステータス情報
-                    // Note: ログ整合性のチェックは別途生ログが必要だが、ここではダミー値をセット
                     dto.setLogStatus("集計済");
-                    dto.setApprovalStatus(summary.getStatus()); // DBのPENDING/APPROVED/FINALIZEDをそのまま利用
+                    dto.setApprovalStatus(summary.getStatus());
 
                     return dto;
                 })
@@ -72,41 +69,59 @@ public class DailyAttendanceSummaryService {
     }
 
     /**
-     * 指定期間内の勤怠サマリーレコードを「承認済み」に一括更新します。
+     * 指定された勤怠サマリーIDのリストの中から、さらに指定期間内にあるものだけを「承認済み」に更新します。
+     * (検索結果と期間による二重チェック、単体承認時は期間チェックをスキップ)
      *
-     * @param startDate  承認期間開始日
-     * @param endDate    承認期間終了日
-     * @param approverId 承認操作を行った従業員ID (管理者/マネージャー)
-     * @return 承認されたレコードのリスト
+     * @param summaryIds 承認対象のDailyAttendanceSummaryのIDリスト
+     * @param startDate  チェック対象期間開始日
+     * @param endDate    チェック対象期間終了日
+     * @param approverId 承認操作を行った管理者ID
+     * @return 承認されたレコード数
      */
     @Transactional
-    public List<DailyAttendanceSummary> approveSummariesByPeriod(
+    public int approveSummariesByIds(
+            List<Long> summaryIds,
             LocalDate startDate,
             LocalDate endDate,
             String approverId) {
 
-        // 1. 指定期間内のPENDING状態のレコードを全て取得
-        List<DailyAttendanceSummary> summariesToApprove = summaryRepository.findByWorkDateBetweenAndStatusIn(
-                startDate,
-                endDate,
-                List.of(STATUS_PENDING));
-
-        OffsetDateTime now = OffsetDateTime.now();
-
-        // 2. 各レコードの監査フィールドとステータスを更新
-        for (DailyAttendanceSummary summary : summariesToApprove) {
-            // ステータスをAPPROVEDに変更
-            summary.setStatus(STATUS_APPROVED);
-
-            // 承認情報を設定
-            summary.setApprovedById(approverId);
-            summary.setApprovedAt(now);
-
-            // 承認も一種の更新操作として記録
-            summary.setUpdatedById(approverId);
+        if (summaryIds == null || summaryIds.isEmpty()) {
+            return 0;
         }
 
-        // 3. 一括保存（更新）
-        return summaryRepository.saveAll(summariesToApprove);
+        employeeRepository.findById(approverId)
+                .orElseThrow(() -> new RuntimeException("承認操作を行う従業員IDが見つかりません: " + approverId));
+
+        OffsetDateTime approvalTime = OffsetDateTime.now(JST_ZONE);
+
+        // 単体承認時は期間チェックをスキップするかどうかを決定
+        final boolean skipDateCheck = summaryIds.size() == 1;
+
+        // 1. IDリストに基づいて対象のサマリーを取得
+        List<DailyAttendanceSummary> summariesToApprove = summaryRepository.findAllById(summaryIds);
+
+        // 2. 更新が必要な（PENDING状態 AND (単体承認OR期間内)）のサマリーのみを抽出
+        List<DailyAttendanceSummary> updatedSummaries = summariesToApprove.stream()
+                // PENDING状態のものに絞る
+                .filter(summary -> STATUS_PENDING.equals(summary.getStatus()))
+
+                // ★ 修正された期間チェックロジック ★
+                .filter(summary -> skipDateCheck ||
+                        (!summary.getWorkDate().isBefore(startDate) && !summary.getWorkDate().isAfter(endDate)))
+
+                .peek(summary -> {
+                    // APPROVED に更新
+                    summary.setStatus(STATUS_APPROVED);
+                    summary.setApprovedById(approverId);
+                    summary.setApprovedAt(approvalTime);
+                    summary.setUpdatedById(approverId);
+                })
+                .collect(Collectors.toList());
+
+        // 3. 一括で保存/更新を実行
+        summaryRepository.saveAll(updatedSummaries);
+
+        // 4. 更新件数を返す
+        return updatedSummaries.size();
     }
 }

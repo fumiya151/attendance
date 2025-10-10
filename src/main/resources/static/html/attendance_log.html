@@ -61,13 +61,24 @@
                     <button class="primary-btn export-btn" id="batch-approve-btn">
                         <i class="fas fa-check-double"></i> 期間一括承認
                     </button>
+                    <button class="secondary-btn"><i class="fas fa-file-export"></i> CSV出力</button>
                 </div>
                 
                 <hr>
 
                 <h4>勤怠ログの検索・修正</h4>
-                <div class="action-bar">
-                    <input type="text" id="search-input" placeholder="氏名、日付で検索..." class="search-input">
+                <div class="action-bar search-controls">
+                    
+                    <label for="search-month">対象月:</label>
+                    <select id="search-month" class="search-select">
+                        <option value="">--- 全期間 ---</option>
+                        </select>
+
+                    <label for="search-employee">従業員名:</label>
+                    <select id="search-employee" class="search-select">
+                        <option value="">--- 全従業員 ---</option>
+                        </select>
+
                     <button class="primary-btn" id="search-button"><i class="fas fa-search"></i> 検索</button>
                 </div>
 

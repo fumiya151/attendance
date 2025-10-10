@@ -44,7 +44,7 @@ function renderEmployeeRows(list) {
             <td>${emp.email || '---'}</td>
             <td>
                 <button class="small-btn edit-btn"><i class="fas fa-pen"></i> 編集</button>
-                <button class="small-btn delete-btn"><i class="fas fa-trash-alt"></i> 退職処理</button>
+                <button class="small-btn delete-btn"><i class="fas fa-trash-alt"></i> 削除</button>
             </td>
         `;
         
@@ -61,7 +61,7 @@ function renderEmployeeRows(list) {
             const tr = deleteBtn.closest('tr');
             const employeeId = tr.dataset.id;
             
-            if (confirm(`従業員コード: ${employeeId} の従業員を本当に退職処理（論理削除）しますか？`)) {
+            if (confirm(`従業員コード: ${employeeId} の従業員を本当に削除しますか？`)) {
                 try {
                     const operatorId = getLoggedInEmployeeId();
                     

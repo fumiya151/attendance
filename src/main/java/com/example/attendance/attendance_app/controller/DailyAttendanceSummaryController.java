@@ -1,11 +1,10 @@
 package com.example.attendance.attendance_app.controller;
 
-import com.example.attendance.attendance_app.dto.DailyAttendanceSummaryDto; // ★ 追加
-import com.example.attendance.attendance_app.model.DailyAttendanceSummary;
+import com.example.attendance.attendance_app.dto.DailyAttendanceSummaryDto;
 import com.example.attendance.attendance_app.service.DailyAttendanceSummaryService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -24,9 +23,6 @@ public class DailyAttendanceSummaryController {
         /**
          * 全期間の勤怠サマリーを従業員名情報付きで取得するAPIです。
          *
-         * 【機能】
-         * 勤怠ログ/修正画面のメインテーブル表示に使用されます。
-         *
          * @return DailyAttendanceSummaryDtoのリスト
          */
         @GetMapping
@@ -35,31 +31,50 @@ public class DailyAttendanceSummaryController {
                 return summaryService.getAllSummariesWithEmployeeInfo();
         }
 
+        // ★ 削除: /approve/batch エンドポイントは削除されました（機能統合のため） ★
+
         /**
-         * 指定期間の勤怠サマリーを一括承認するAPIです.
+         * POST /api/summaries/approve/list
+         * 勤怠サマリーIDと期間を受け取り、一括承認を実行します。（検索結果と期間による二重チェックに対応）
+         * 単体承認の場合も、ID 1件と期間を送信することでこのエンドポイントが処理します。
          *
-         * @param startDate  承認期間開始日 (YYYY-MM-DD)
-         * @param endDate    承認期間終了日 (YYYY-MM-DD)
-         * @param approverId 承認操作を行った従業員ID (ヘッダーから取得)
-         * @return 承認されたレコード数を含むメッセージ
+         * @param operatorId  HTTPヘッダー（X-Operator-Idを取得）
+         * @param requestBody JSONボディ（summaryIds, startDate, endDate）
+         * @return 承認されたレコード数を含む応答
          */
-        @PostMapping("/approve/batch")
-        public ResponseEntity<Map<String, String>> approveSummariesBatch(
-                        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-                        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-                        @RequestHeader(OPERATOR_HEADER) String approverId) {
+        @PostMapping("/approve/list")
+        @SuppressWarnings("unchecked")
+        public ResponseEntity<Map<String, Object>> batchApproveSummaries(
+                        @RequestHeader(OPERATOR_HEADER) String operatorId,
+                        @RequestBody Map<String, Object> requestBody) {
 
-                List<DailyAttendanceSummary> approvedSummaries = summaryService.approveSummariesByPeriod(
-                                startDate,
-                                endDate,
-                                approverId);
+                // JSONから各データ型を抽出・変換
+                List<Long> summaryIds = (List<Long>) requestBody.get("summaryIds");
+                String startDateStr = (String) requestBody.get("startDate");
+                String endDateStr = (String) requestBody.get("endDate");
 
-                int count = approvedSummaries.size();
-                String message = String.format("%sから%sまでの勤怠サマリー%d件を承認しました。",
-                                startDate.toString(),
-                                endDate.toString(),
-                                count);
+                if (summaryIds == null || summaryIds.isEmpty() || startDateStr == null || endDateStr == null) {
+                        return ResponseEntity.badRequest()
+                                        .body(Map.of("message", "承認対象のIDリストまたは期間が提供されていません。", "approvedCount", 0));
+                }
 
-                return ResponseEntity.ok(Map.of("message", message, "approvedCount", String.valueOf(count)));
+                // String型の日付をLocalDateに変換
+                LocalDate startDate = LocalDate.parse(startDateStr);
+                LocalDate endDate = LocalDate.parse(endDateStr);
+
+                try {
+                        // Service層でIDリスト、開始日、終了日による二重チェック承認処理を呼び出す
+                        int approvedCount = summaryService.approveSummariesByIds(summaryIds, startDate, endDate,
+                                        operatorId);
+
+                        // 成功応答を返す。JavaScript側が期待する形式（approvedCount）
+                        return ResponseEntity.ok(Map.of(
+                                        "message", approvedCount + "件の勤怠サマリーを承認しました。",
+                                        "approvedCount", approvedCount));
+                } catch (RuntimeException e) {
+                        // サービス層での例外（例: 管理者IDが見つからない）をキャッチし、400エラーとして返す
+                        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                                        .body(Map.of("message", e.getMessage(), "approvedCount", 0));
+                }
         }
 }
