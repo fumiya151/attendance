@@ -72,7 +72,7 @@
             </section>
 
             <section id="payroll" class="content-view">
-                <h3>給与計算・勤務時間集計</h3>
+                <h3>勤務時間集計</h3>
                 <div class="card-grid">
                     <div class="card info-card">
                         <p class="card-title">集計対象期間</p>
@@ -83,11 +83,11 @@
 
                     <div class="card summary-card">
                         <p class="card-title">全従業員の総労働時間</p>
-                        <p class="card-value">1,560 時間</p>
+                        <p class="card-value" id="total-work-hours">- 時間</p>
                     </div>
                     <div class="card summary-card">
                         <p class="card-title">平均残業時間（月）</p>
-                        <p class="card-value red">18.5 時間</p>
+                        <p class="card-value red" id="average-overtime">- 時間</p>
                     </div>
                 </div>
 
@@ -102,14 +102,7 @@
                             <th>アクション</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <tr>
-                            <td>佐藤 太郎</td>
-                            <td>160:00</td>
-                            <td>10:00</td>
-                            <td>2:30</td>
-                            <td><button class="small-btn export-btn">明細出力</button></td>
-                        </tr>
+                    <tbody id="payroll-results-body">
                         </tbody>
                 </table>
             </section>

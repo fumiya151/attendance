@@ -7,11 +7,10 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class PayrollDto {
+public class AggregatedAttendanceSummaryDto {
     private String employeeId;
     private String employeeName;
-    private Double totalHours;
-    private Double overtimeHours;
-    private Double lateNightHours;
-    private Double calculatedSalary;
+    private double totalHours;
+    private double overtimeHours;
+    private double lateNightHours;
 }

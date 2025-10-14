@@ -5,12 +5,14 @@ import com.example.attendance.attendance_app.model.Employee;
 import com.example.attendance.attendance_app.repository.DailyAttendanceSummaryRepository;
 import com.example.attendance.attendance_app.repository.EmployeeRepository;
 import com.example.attendance.attendance_app.dto.DailyAttendanceSummaryDto;
+import com.example.attendance.attendance_app.dto.MonthlySummaryDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
@@ -28,7 +30,52 @@ public class DailyAttendanceSummaryService {
     private static final ZoneId JST_ZONE = ZoneId.of("Asia/Tokyo");
 
     /**
+     * 指定された月度の全従業員の勤怠サマリーを集計するメソッドです.
+     *
+     * 【機能】
+     * 指定された月内の全従業員の総労働時間と平均残業時間を計算します。
+     * 標準労働時間は8時間/日として計算します。
+     *
+     * 【注意事項】
+     * 計算はサマリーテーブルのデータに基づいて行われます。
+     *
+     * @param yearMonth 集計対象の年月 (YearMonthオブジェクト)
+     * @return 月間集計結果のDTO (MonthlySummaryDto)
+     */
+    public MonthlySummaryDto getMonthlySummary(YearMonth yearMonth) {
+        LocalDate startDate = yearMonth.atDay(1);
+        LocalDate endDate = yearMonth.atEndOfMonth();
+
+        List<DailyAttendanceSummary> summaries = summaryRepository.findByWorkDateBetween(startDate, endDate);
+
+        long totalMinutes = summaries.stream().mapToLong(DailyAttendanceSummary::getTotalWorkMinutes).sum();
+        double totalHours = totalMinutes / 60.0;
+
+        // 休憩時間が引かれた総労働時間から、標準労働時間（8時間）を超過した分を残業時間として計算
+        long totalOvertimeMinutes = summaries.stream().mapToLong(summary -> {
+            long standardWorkMinutes = 8 * 60;
+            long overtime = summary.getTotalWorkMinutes() - standardWorkMinutes;
+            return Math.max(overtime, 0);
+        }).sum();
+
+        long numberOfEmployees = summaries.stream().map(DailyAttendanceSummary::getEmployeeId).distinct().count();
+
+        double averageOvertimeHours = 0;
+        if (numberOfEmployees > 0) {
+            averageOvertimeHours = (totalOvertimeMinutes / 60.0) / numberOfEmployees;
+        }
+
+        return new MonthlySummaryDto(totalHours, averageOvertimeHours);
+    }
+
+    /**
      * 全期間の勤怠サマリーを従業員名情報と承認ステータス付きで取得します。
+     *
+     * 【機能】
+     * 全ての勤怠サマリーを取得し、対応する従業員名情報を結合して、DTOリストとして返却します。
+     *
+     * 【注意事項】
+     * 大量のデータがある場合、パフォーマンスに影響を与える可能性があります。
      *
      * @return DailyAttendanceSummaryDtoのリスト
      */
@@ -69,12 +116,19 @@ public class DailyAttendanceSummaryService {
     }
 
     /**
-     * 指定された勤怠サマリーIDのリストの中から、さらに指定期間内にあるものだけを「承認済み」に更新します。
-     * (検索結果と期間による二重チェック、単体承認時は期間チェックをスキップ)
+     * 指定された勤怠サマリーを「承認済み」に更新するメソッドです.
+     *
+     * 【機能】
+     * 指定IDのリストに基づき、対象の勤怠サマリーを検索し、以下の条件を満たすもののみステータスをAPPROVEDに更新します。
+     * 1. 現在のステータスがPENDINGであること。
+     * 2. (リストが複数件の場合) 指定された期間内にあること。
+     *
+     * 【注意事項】
+     * 承認操作を行う従業員IDが存在しない場合はRuntimeExceptionをスローします。
      *
      * @param summaryIds 承認対象のDailyAttendanceSummaryのIDリスト
-     * @param startDate  チェック対象期間開始日
-     * @param endDate    チェック対象期間終了日
+     * @param startDate  チェック対象期間開始日（単体承認時は無視される）
+     * @param endDate    チェック対象期間終了日（単体承認時は無視される）
      * @param approverId 承認操作を行った管理者ID
      * @return 承認されたレコード数
      */
@@ -105,7 +159,7 @@ public class DailyAttendanceSummaryService {
                 // PENDING状態のものに絞る
                 .filter(summary -> STATUS_PENDING.equals(summary.getStatus()))
 
-                // ★ 修正された期間チェックロジック ★
+                // ★ 修正された期間チェックロジック（単体承認時は日付チェックを無視） ★
                 .filter(summary -> skipDateCheck ||
                         (!summary.getWorkDate().isBefore(startDate) && !summary.getWorkDate().isAfter(endDate)))
 

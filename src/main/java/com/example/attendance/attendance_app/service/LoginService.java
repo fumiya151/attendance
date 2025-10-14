@@ -29,11 +29,20 @@ public class LoginService {
     /**
      * ログイン認証とJWTトークン発行を行うメソッドです.
      *
+     * 【機能】
+     * 1. 従業員IDとパスワードで認証を行います。
+     * 2. 要求ロール('admin'/'user')に基づき、従業員のロール権限を確認します。
+     * 3. 認証・権限チェック成功時、JWTトークンを生成して返却します。
+     *
+     * 【注意事項】
+     * ・現在は管理者ログイン('admin')時のロールチェックはスキップされます。
+     * ・打刻ログイン('user')は、ロールコードが'ADMIN'または'MGR'の従業員に限定されます。
+     *
      * @param employeeId    従業員コード (username)
-     * @param password        パスワード
+     * @param password      パスワード
      * @param requestedRole フロントエンドから送られた要求ロール ('user' or 'admin')
-     * @return 成功時はMap<"token", String, "employeeId", String>、ロール拒否時はMap<"status",
-     *         "ROLE_DENIED">、認証失敗時はnull
+     * @return 成功時はMap<"token", String, "employeeId",
+     *         String>、認証失敗時はnull、ロール拒否時はMap<"status", "ROLE_DENIED">
      */
     public Map<String, String> loginAndGenerateToken(String employeeId, String password, String requestedRole) {
         Optional<Employee> employeeOptional = loginRepository.findByEmployeeId(employeeId);
@@ -97,11 +106,16 @@ public class LoginService {
     /**
      * JWTトークンを生成するメソッドです.
      *
+     * 【機能】
+     * 従業員情報に基づき、有効期限付きのJWT(JSON Web Token)を生成します。
+     *
+     * 【注意事項】
+     * 有効期限はjwtExpirationMsで定義されています。
+     *
      * @param employee 従業員エンティティ
      * @return JWTトークン文字列
      */
     private String generateJwtToken(Employee employee) {
-        // ... (generateJwtTokenメソッドは変更なし) ...
         javax.crypto.SecretKey key = Keys.hmacShaKeyFor(jwtSecretBytes);
         return Jwts.builder()
                 .setSubject(employee.getEmployeeId())

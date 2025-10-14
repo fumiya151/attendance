@@ -21,8 +21,6 @@ public interface DailyAttendanceSummaryRepository extends JpaRepository<DailyAtt
      */
     Optional<DailyAttendanceSummary> findByEmployeeIdAndWorkDate(String employeeId, LocalDate workDate);
 
-    // ★ 追加メソッド: 給与計算用 ★
-
     /**
      * 指定された期間内（workDate BETWEEN startDate AND endDate）の勤怠サマリーを、
      * 指定されたステータス（IN statuses）に含まれるものに限定して検索します。
@@ -34,4 +32,6 @@ public interface DailyAttendanceSummaryRepository extends JpaRepository<DailyAtt
      */
     List<DailyAttendanceSummary> findByWorkDateBetweenAndStatusIn(LocalDate startDate, LocalDate endDate,
             List<String> statuses);
+
+    List<DailyAttendanceSummary> findByWorkDateBetween(LocalDate startDate, LocalDate endDate);
 }

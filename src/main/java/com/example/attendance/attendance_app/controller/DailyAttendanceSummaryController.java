@@ -1,6 +1,7 @@
 package com.example.attendance.attendance_app.controller;
 
 import com.example.attendance.attendance_app.dto.DailyAttendanceSummaryDto;
+import com.example.attendance.attendance_app.dto.MonthlySummaryDto;
 import com.example.attendance.attendance_app.service.DailyAttendanceSummaryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -8,6 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
 
@@ -20,6 +23,17 @@ public class DailyAttendanceSummaryController {
 
         private static final String OPERATOR_HEADER = "X-Operator-Id";
 
+        @GetMapping("/monthly")
+        public ResponseEntity<?> getMonthlySummary(@RequestParam String yearMonth) {
+                try {
+                        YearMonth ym = YearMonth.parse(yearMonth);
+                        MonthlySummaryDto summary = summaryService.getMonthlySummary(ym);
+                        return ResponseEntity.ok(summary);
+                } catch (DateTimeParseException e) {
+                        return ResponseEntity.badRequest().body("Invalid yearMonth format. Please use YYYY-MM.");
+                }
+        }
+
         /**
          * 全期間の勤怠サマリーを従業員名情報付きで取得するAPIです。
          *
@@ -30,8 +44,6 @@ public class DailyAttendanceSummaryController {
                 // Service層でEmployee情報と結合されたDTOを取得する
                 return summaryService.getAllSummariesWithEmployeeInfo();
         }
-
-        // ★ 削除: /approve/batch エンドポイントは削除されました（機能統合のため） ★
 
         /**
          * POST /api/summaries/approve/list

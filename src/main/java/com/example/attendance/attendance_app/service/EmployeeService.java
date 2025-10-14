@@ -24,6 +24,19 @@ public class EmployeeService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
 
+    /**
+     * 新規従業員にデフォルトの役割を割り当てるプライベートメソッドです。
+     *
+     * 【機能】
+     * 従業員IDと役割IDに基づき、EmployeeRoleテーブルにエントリを作成します。
+     *
+     * 【注意事項】
+     * 役割ID（roleId）が存在しない場合はRuntimeExceptionをスローします。
+     *
+     * @param employee   役割を割り当てる従業員エンティティ
+     * @param roleId     割り当てる役割のID
+     * @param operatorId 操作を行った従業員ID
+     */
     private void assignDefaultRole(Employee employee, Long roleId, String operatorId) {
         if (roleId == null) {
             throw new IllegalArgumentException("役割IDは必須です。");
@@ -43,10 +56,10 @@ public class EmployeeService {
      * 従業員一覧を取得するメソッドです.
      *
      * 【機能】
-     * 従業員情報を全件取得し、DTOリストで返します。
+     * 有効な（アクティブな）従業員情報を全件取得し、DTOリストで返します。
      *
      * 【注意事項】
-     * 特になし
+     * 論理削除された従業員（isActive=false）は除外されます。
      *
      * @return 従業員DTOリスト
      */
@@ -61,7 +74,8 @@ public class EmployeeService {
      * EmployeeエンティティをDTOに変換するメソッドです.
      *
      * 【機能】
-     * エンティティの各項目をDTOにセットし、**employeeテーブルのdepartment（役職名）**をDTOにセットします。（元の動作に戻す）
+     * エンティティの各項目をDTOにセットします。特に、Employeeエンティティのdepartmentフィールドを
+     * DTOのdepartment（役職）フィールドにセットします。
      *
      * 【注意事項】
      * 特になし
@@ -75,12 +89,19 @@ public class EmployeeService {
         dto.setName(employee.getName());
         dto.setEmail(employee.getEmail());
         dto.setActive(employee.getIsActive());
-        dto.setDepartment(employee.getDepartment());
+        dto.setDepartment(employee.getDepartment()); // employeeテーブルのdepartment（役職名）をDTOにセット
         return dto;
     }
 
     /**
      * 従業員情報を登録するメソッドです.
+     *
+     * 【機能】
+     * リクエストDTOの内容に基づき、Employeeテーブルに新規従業員を登録し、パスワードをハッシュ化します。
+     * 登録後、指定された役割IDに基づきデフォルトの役割を割り当てます。
+     *
+     * 【注意事項】
+     * 従業員IDとパスワードは必須です。
      *
      * @param request    従業員登録リクエストDTO
      * @param operatorId 登録操作を行った従業員ID
@@ -116,13 +137,13 @@ public class EmployeeService {
      * 従業員を氏名またはコードで検索するメソッドです.
      *
      * 【機能】
-     * 部分一致検索と表示件数制限が可能です。
+     * キーワード（氏名または従業員ID）に基づき、アクティブな従業員を部分一致検索し、最大表示件数で制限します。
      *
      * 【注意事項】
-     * キーワードがnullまたは空の場合は全件取得します。
+     * キーワードがnullまたは空の場合は、アクティブな従業員を全件取得し、件数制限を適用します。
      *
      * @param keyword 検索キーワード（任意）
-     * @param limit     最大表示件数
+     * @param limit   最大表示件数
      * @return 従業員DTOリスト
      */
     public List<EmployeeDto> searchEmployees(String keyword, int limit) {
@@ -142,16 +163,16 @@ public class EmployeeService {
 
     /**
      * 従業員編集メソッドです.
-     * 
+     *
      * 【機能】
-     * 指定IDの従業員情報を更新します。
+     * 指定IDの従業員情報を更新します。氏名、役職、メールアドレスの変更、および役割の変更を処理します。
      *
      * 【注意事項】
-     * 特になし
+     * 従業員IDの変更はできません。
      *
      * @param employeeId 従業員ID
-     * @param dto               更新内容（DTO）
-     * @param updaterId   更新操作を行った従業員ID
+     * @param dto        更新内容（DTO）
+     * @param updaterId  更新操作を行った従業員ID
      * @return 更新後の従業員DTO
      */
     @Transactional
@@ -193,6 +214,12 @@ public class EmployeeService {
     /**
      * 従業員をIDで取得するメソッドです.
      *
+     * 【機能】
+     * 指定された従業員IDに対応する従業員情報を取得し、DTOとして返します。
+     *
+     * 【注意事項】
+     * 従業員が見つからない場合はRuntimeExceptionをスローします。
+     *
      * @param employeeId 従業員ID
      * @return 従業員DTO
      */
@@ -206,10 +233,10 @@ public class EmployeeService {
      * 従業員削除メソッドです (論理削除).
      *
      * 【機能】
-     * 指定IDの従業員情報を削除します。
+     * 指定IDの従業員情報のisActiveフラグをfalseに設定し、論理的に退職処理を行います。
      *
      * 【注意事項】
-     * 特になし
+     * 物理的なデータ削除は行いません。
      *
      * @param employeeId 従業員ID
      * @param operatorId 削除操作を行った従業員ID

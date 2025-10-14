@@ -1,5 +1,8 @@
 package com.example.attendance.attendance_app.controller;
 
+import com.example.attendance.attendance_app.dto.AggregatedAttendanceSummaryDto;
+import java.time.LocalDate;
+import org.springframework.format.annotation.DateTimeFormat;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import com.example.attendance.attendance_app.dto.AttendanceRequest;
@@ -20,15 +23,12 @@ public class AttendanceController {
     // ★ 定数として操作者IDのヘッダー名を定義
     private static final String OPERATOR_HEADER = "X-Operator-Id";
 
-    /**
-     * 次に有効な打刻種別リストを返すAPI
-     *
-     * @param employeeId 従業員ID
-     * @return 有効な打刻種別リスト
-     */
-    @GetMapping("/next-available/{employeeId}")
-    public List<String> getNextAvailableStampTypes(@PathVariable String employeeId) {
-        return attendanceService.getNextAvailableStampTypes(employeeId);
+    @GetMapping("/summary")
+    public ResponseEntity<List<AggregatedAttendanceSummaryDto>> getAggregatedAttendanceSummary(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        List<AggregatedAttendanceSummaryDto> summaries = attendanceService.getAggregatedAttendanceSummary(startDate, endDate);
+        return ResponseEntity.ok(summaries);
     }
 
     /**
