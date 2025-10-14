@@ -14,6 +14,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -73,6 +74,7 @@ public class DailyAttendanceSummaryService {
      *
      * 【機能】
      * 全ての勤怠サマリーを取得し、対応する従業員名情報を結合して、DTOリストとして返却します。
+     * リストは workDate の降順（新しい日付が先）でソートされます。
      *
      * 【注意事項】
      * 大量のデータがある場合、パフォーマンスに影響を与える可能性があります。
@@ -87,8 +89,10 @@ public class DailyAttendanceSummaryService {
         // 2. 全ての勤怠サマリーを取得
         List<DailyAttendanceSummary> allSummaries = summaryRepository.findAll();
 
-        // 3. サマリーと従業員名を結合し、DTOに変換
+        // 3. サマリーを日付降順でソートし、従業員名と結合してDTOに変換
         return allSummaries.stream()
+                // workDate (LocalDate) の降順でソート
+                .sorted(Comparator.comparing(DailyAttendanceSummary::getWorkDate).reversed())
                 .map(summary -> {
                     DailyAttendanceSummaryDto dto = new DailyAttendanceSummaryDto();
 
@@ -126,8 +130,8 @@ public class DailyAttendanceSummaryService {
      * 承認操作を行う従業員IDが存在しない場合はRuntimeExceptionをスローします。
      *
      * @param summaryIds 承認対象のDailyAttendanceSummaryのIDリスト
-     * @param startDate  チェック対象期間開始日（単体承認時は無視される）
-     * @param endDate    チェック対象期間終了日（単体承認時は無視される）
+     * @param startDate   チェック対象期間開始日（単体承認時は無視される）
+     * @param endDate       チェック対象期間終了日（単体承認時は無視される）
      * @param approverId 承認操作を行った管理者ID
      * @return 承認されたレコード数
      */

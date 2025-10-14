@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const approveBtn = document.getElementById('batch-approve-btn');
     // 期間入力フィールドの参照
     const startDateInput = document.getElementById('approval-start-date'); 
-    const endDateInput = document.getElementById('approval-end-date');   
+    const endDateInput = document.getElementById('approval-end-date');   
 
     // 一括承認ボタンのイベントリスナー（検索結果承認 + 期間チェック）
     if (approveBtn && startDateInput && endDateInput) {
@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     body: JSON.stringify({ 
                         summaryIds: pendingIds, 
                         startDate: startDate, 
-                        endDate: endDate      
+                        endDate: endDate      
                     }) 
                 });
 
@@ -88,6 +88,20 @@ document.addEventListener('DOMContentLoaded', function () {
                     console.error("Batch approval error:", error);
                 }
             }
+        });
+    }
+
+    // PDFエクスポートボタンのイベントリスナー
+    const pdfExportBtn = document.getElementById('csv-export-btn'); // IDは元のまま使用
+    if (pdfExportBtn) {
+        pdfExportBtn.addEventListener('click', () => {
+            if (currentDisplayedSummaries.length === 0) {
+                alert("エクスポートする勤怠ログがありません。");
+                return;
+            }
+
+            // PDF出力関数を呼び出す
+            exportToPdf(); 
         });
     }
 });
@@ -313,3 +327,71 @@ function applyFiltersAndRenderTable(summaries) {
         });
     });
 }
+
+
+// --- PDF生成・ダウンロード関数 ---
+/**
+ * 現在表示されているテーブルをキャプチャし、PDFとして出力します。
+ * html2canvasとjsPDFが必要です。
+ */
+async function exportToPdf() {
+    const tableElement = document.querySelector('.data-table');
+    if (!tableElement) {
+        alert("テーブル要素が見つかりません。");
+        return;
+    }
+    
+    // ファイル名生成 (例: attendance_2025-10-14.pdf)
+    const today = new Date().toISOString().substring(0, 10);
+    const filename = `attendance_log_${today}.pdf`;
+
+    // ユーザーに処理中であることを知らせる
+    const originalButton = document.getElementById('csv-export-btn');
+    const originalButtonText = originalButton.innerHTML;
+    originalButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> PDF生成中...';
+    originalButton.disabled = true;
+
+    try {
+        // 1. テーブル要素全体を画像としてキャプチャ
+        const canvas = await html2canvas(tableElement, { scale: 2 }); // スケール2で高解像度に
+        const imgData = canvas.toDataURL('image/jpeg', 0.9); // JPEG形式のBase64エンコード画像データ
+
+        // 2. jsPDFを初期化
+        const { jsPDF } = window.jspdf;
+        // A4サイズ、縦向きでドキュメントを作成
+        const doc = new jsPDF('p', 'mm', 'a4'); 
+
+        // 3. 画像サイズと位置を計算
+        const imgWidth = 190; // A4幅に収まるよう調整 (210mm - 20mm余白)
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        let heightLeft = imgHeight;
+        let position = 10; // 上部の余白
+
+        // 4. PDFに画像を追加
+        doc.addImage(imgData, 'JPEG', 10, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+
+        // 5. 画像が複数ページにわたる場合、新しいページを追加して残りの画像を描画
+        while (heightLeft >= -10) { // わずかな余白を残してチェック
+            position = heightLeft - imgHeight + 10;
+            doc.addPage();
+            doc.addImage(imgData, 'JPEG', 10, position, imgWidth, imgHeight);
+            heightLeft -= pageHeight;
+        }
+
+        // 6. ファイルをダウンロード
+        doc.save(filename);
+        
+        alert("✅ PDFファイルの生成とダウンロードを開始しました。");
+
+    } catch (error) {
+        console.error("PDF生成エラー:", error);
+        alert("❌ PDF生成中にエラーが発生しました。\n詳細をコンソールで確認してください。");
+    } finally {
+        // ボタンを元に戻す
+        originalButton.innerHTML = originalButtonText;
+        originalButton.disabled = false;
+    }
+}
+// --- PDF生成関数 終わり ---
