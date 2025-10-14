@@ -1,9 +1,5 @@
 /* system_settings.css */
 
-.settings-card {
-    /* カードの基本的なスタイルは common.css から継承 */
-}
-
 .settings-card .card-title {
     font-size: 1.1em;
     color: #333;
@@ -40,28 +36,6 @@
 
 .setting-item.checkbox-item input {
     margin-right: 10px;
-}
-
-.master-data-links {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.master-data-link {
-    display: block;
-    padding: 12px 15px;
-    background-color: #f8f9fa;
-    border-radius: 5px;
-    text-decoration: none;
-    color: #3498db;
-    font-weight: 600;
-    transition: background-color 0.2s;
-    border: 1px solid #eee;
-}
-
-.master-data-link:hover {
-    background-color: #e9ecef;
 }
 
 /* common.css の card-grid を設定ページ用に調整 */

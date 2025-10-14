@@ -140,6 +140,28 @@ body {
     color: white;
 }
 
+.master-data-links {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.master-data-link {
+    display: block;
+    padding: 12px 15px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    text-decoration: none;
+    color: #3498db;
+    font-weight: 600;
+    transition: background-color 0.2s;
+    border: 1px solid #eee;
+}
+
+.master-data-link:hover {
+    background-color: #e9ecef;
+}
+
 /* -------------------- メインコンテンツ -------------------- */
 .main-content {
     margin-left: 100px; /* ★ 修正点2: サイドバーの幅に合わせてマージンを100pxに変更 */

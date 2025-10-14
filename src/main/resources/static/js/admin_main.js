@@ -373,7 +373,6 @@ function applyFiltersAndRenderTable(summaries) {
             <td>${formatTime(sum.actualInTime)}</td>
             <td>${sum.totalBreakMinutes ? (sum.totalBreakMinutes + '分') : '---'}</td> 
             <td>${formatTime(sum.actualOutTime)}</td>
-            <td>${sum.logStatus || '---'}</td> 
             <td><span class="${approvalClass}">${approvalText}</span></td> 
             <td>${actions}</td>
         `;
