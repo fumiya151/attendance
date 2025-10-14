@@ -242,8 +242,9 @@ function applyFiltersAndRenderTable(summaries) {
         row.innerHTML = `
             <td>${sum.workDate}</td>
             <td>${sum.employeeName}</td>
-            <td>${formatTime(sum.actualInTime)}</td> <td>${sum.totalBreakMinutes ? (sum.totalBreakMinutes + '分') : '---'}</td> 
-            <td>${formatTime(sum.actualOutTime)}</td> <td>${sum.logStatus || '---'}</td> 
+            <td>${formatTime(sum.actualInTime)}</td> 
+            <td>${sum.totalBreakMinutes ? (sum.totalBreakMinutes + '分') : '---'}</td> 
+            <td>${formatTime(sum.actualOutTime)}</td>
             <td><span class="${approvalClass}">${approvalText}</span></td> 
             <td>${actions}</td>
         `;

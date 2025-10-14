@@ -15,8 +15,6 @@ import java.util.List;
 public class EmployeeController {
 
     private final EmployeeService employeeService;
-
-    // ★ 定数としてヘッダー名を定義しておくと便利です
     private static final String OPERATOR_HEADER = "X-Operator-Id";
 
     /**

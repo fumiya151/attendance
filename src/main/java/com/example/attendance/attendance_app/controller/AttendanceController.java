@@ -27,19 +27,14 @@ public class AttendanceController {
     public ResponseEntity<List<AggregatedAttendanceSummaryDto>> getAggregatedAttendanceSummary(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        List<AggregatedAttendanceSummaryDto> summaries = attendanceService.getAggregatedAttendanceSummary(startDate, endDate);
+        List<AggregatedAttendanceSummaryDto> summaries = attendanceService.getAggregatedAttendanceSummary(startDate,
+                endDate);
         return ResponseEntity.ok(summaries);
     }
 
     /**
      * 勤怠登録APIのエンドポイントです.
-     *
-     * 【機能】
-     * 勤怠情報を登録します。打刻が「退勤」の場合、サービス層で日次集計が実行され、操作者IDが監査ログに記録されます。
-     *
-     * @param request    勤怠リクエスト
-     * @param operatorId 勤怠操作を行った従業員ID (ヘッダーから取得)
-     * @return 登録結果メッセージ
+     * ...
      */
     @PostMapping("/stamp")
     public ResponseEntity<String> recordAttendance(
@@ -56,7 +51,7 @@ public class AttendanceController {
         // Note: request.getName() は AttendanceRequest DTO に name フィールドがある前提です
         String message = String.format(
                 "%sさんの「%s」を記録しました。(%s)",
-                request.getName(), // AttendanceRequest DTOにnameフィールドがあることを前提
+                request.getName(),
                 savedAttendance.getStampType(),
                 formattedTimestamp);
 
@@ -65,9 +60,7 @@ public class AttendanceController {
 
     /**
      * 最新勤怠取得APIのエンドポイントです.
-     *
-     * @param employeeId 従業員ID
-     * @return 最新勤怠DTO
+     * ...
      */
     @GetMapping("/latest/{employeeId}")
     public ResponseEntity<AttendanceDto> getLatestAttendance(@PathVariable String employeeId) {

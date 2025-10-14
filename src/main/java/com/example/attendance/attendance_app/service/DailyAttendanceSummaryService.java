@@ -107,7 +107,6 @@ public class DailyAttendanceSummaryService {
                     dto.setTotalWorkMinutes(summary.getTotalWorkMinutes());
 
                     // ステータス情報
-                    dto.setLogStatus("集計済");
                     dto.setApprovalStatus(summary.getStatus());
 
                     return dto;
@@ -177,5 +176,53 @@ public class DailyAttendanceSummaryService {
 
         // 4. 更新件数を返す
         return updatedSummaries.size();
+    }
+
+    /**
+     * 最新の日次勤怠サマリー10件を、新しい順（ID降順）で取得し、氏名を付与してDTOに変換します。
+     *
+     * @return 最新10件の DailyAttendanceSummaryDto リスト
+     */
+    public List<DailyAttendanceSummaryDto> findLatest10DailySummaries() {
+        // 1. Repositoryからエンティティのリストを取得 (最新10件)
+        List<DailyAttendanceSummary> summaries = summaryRepository.findTop10ByOrderByIdDesc();
+
+        // 2. 従業員IDと氏名のマッピングを効率化するために全従業員を取得
+        Map<String, String> employeeNameMap = employeeRepository.findAll().stream()
+                .collect(Collectors.toMap(Employee::getEmployeeId, Employee::getName,
+                        (existing, replacement) -> existing)); // マッピングの競合回避を追加
+
+        // 3. エンティティをDTOに変換
+        return summaries.stream()
+                .map(summary -> convertToDailySummaryDto(summary, employeeNameMap))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * DailyAttendanceSummaryエンティティをDailyAttendanceSummaryDtoに変換するヘルパーメソッド。
+     * employeeNameとステータスを補完します。
+     */
+    private DailyAttendanceSummaryDto convertToDailySummaryDto(
+            DailyAttendanceSummary summary, Map<String, String> employeeNameMap) {
+
+        DailyAttendanceSummaryDto dto = new DailyAttendanceSummaryDto();
+        dto.setId(summary.getId());
+        dto.setEmployeeId(summary.getEmployeeId());
+
+        // ★ 氏名を設定: employeeIdからマッピングマップを検索 ★
+        String employeeName = employeeNameMap.getOrDefault(summary.getEmployeeId(), "不明な従業員");
+        dto.setEmployeeName(employeeName);
+
+        dto.setWorkDate(summary.getWorkDate());
+        dto.setActualInTime(summary.getActualInTime());
+        dto.setActualOutTime(summary.getActualOutTime());
+        dto.setTotalBreakMinutes(summary.getTotalBreakMinutes());
+        dto.setTotalWorkMinutes(summary.getTotalWorkMinutes());
+
+        // ★ ステータスを設定: Entitiyの statusフィールドを DTO の logStatus/approvalStatus にマッピング ★
+        // logStatusとapprovalStatusはどちらもエンティティのstatusを使用します
+        dto.setApprovalStatus(summary.getStatus());
+
+        return dto;
     }
 }

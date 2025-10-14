@@ -24,7 +24,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const tbody = document.getElementById('confirmation-tbody');
     
-    // active（在職状況）を削除した後の fields 定義
     const fields = [
         { key: 'name', label: '氏名' },
         { key: 'department', label: '役職（権限）' },

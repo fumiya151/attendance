@@ -115,7 +115,7 @@ public class AttendanceService {
      * 【注意事項】
      * 従業員IDが存在しない場合はRuntimeExceptionをスローします。
      *
-     * @param request    勤怠リクエストDTO
+     * @param request       勤怠リクエストDTO
      * @param operatorId 勤怠操作を行った従業員ID (通常は打刻を行った本人)
      * @return 登録された勤怠エンティティ
      */
@@ -151,7 +151,7 @@ public class AttendanceService {
      * 日の区切り時刻（9:00 JST）に基づき、ログ取得期間が決定されます。
      *
      * @param employeeId 従業員ID
-     * @param workDate   勤務日 (9:00締めを考慮して計算済み)
+     * @param workDate     勤務日 (9:00締めを考慮して計算済み)
      * @param operatorId 集計を更新した従業員ID
      */
     private void processCheckoutSummary(String employeeId, LocalDate workDate, String operatorId) {
@@ -203,8 +203,8 @@ public class AttendanceService {
      * OUTがない）は適切に処理されない可能性があります。
      *
      * @param employeeId 従業員ID
-     * @param workDate   勤務日
-     * @param logs       その日の打刻ログ (9:00締めを考慮した範囲)
+     * @param workDate     勤務日
+     * @param logs             その日の打刻ログ (9:00締めを考慮した範囲)
      * @return 計算結果が格納されたDailyAttendanceSummaryオブジェクト
      */
     private DailyAttendanceSummary calculateDailySummary(String employeeId, LocalDate workDate, List<Attendance> logs) {
@@ -343,11 +343,15 @@ public class AttendanceService {
 
         for (Employee employee : employees) {
             String employeeId = employee.getEmployeeId();
-            List<DailyAttendanceSummary> employeeSummaries = summariesByEmployee.getOrDefault(employeeId, new ArrayList<>());
+            List<DailyAttendanceSummary> employeeSummaries = summariesByEmployee.getOrDefault(employeeId,
+                    new ArrayList<>());
 
-            long totalNetWorkMinutes = employeeSummaries.stream().mapToLong(DailyAttendanceSummary::getTotalWorkMinutes).sum();
-            long totalOvertimeMinutes = employeeSummaries.stream().mapToLong(DailyAttendanceSummary::getOvertimeMinutes).sum();
-            long totalLateNightMinutes = employeeSummaries.stream().mapToLong(DailyAttendanceSummary::getNightShiftMinutes).sum();
+            long totalNetWorkMinutes = employeeSummaries.stream().mapToLong(DailyAttendanceSummary::getTotalWorkMinutes)
+                    .sum();
+            long totalOvertimeMinutes = employeeSummaries.stream().mapToLong(DailyAttendanceSummary::getOvertimeMinutes)
+                    .sum();
+            long totalLateNightMinutes = employeeSummaries.stream()
+                    .mapToLong(DailyAttendanceSummary::getNightShiftMinutes).sum();
 
             double totalHours = totalNetWorkMinutes / MINUTES_IN_HOUR;
             double overtimeHours = totalOvertimeMinutes / MINUTES_IN_HOUR;
@@ -362,8 +366,7 @@ public class AttendanceService {
                     employee.getName(),
                     roundedTotalHours,
                     roundedOvertimeHours,
-                    roundedLateNightHours
-            ));
+                    roundedLateNightHours));
         }
 
         return summariesDto;

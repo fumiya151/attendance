@@ -18,6 +18,5 @@ public class DailyAttendanceSummaryDto {
     private Integer totalWorkMinutes;
 
     // ステータス情報
-    private String logStatus;
     private String approvalStatus;
 }

@@ -45,6 +45,19 @@ public class DailyAttendanceSummaryController {
                 return summaryService.getAllSummariesWithEmployeeInfo();
         }
 
+        // ★★★ 修正後のメソッド: 最新10件の日次サマリーをDTOとして取得 ★★★
+        /**
+         * 最新の勤怠サマリー10件を新しい順に取得するAPIエンドポイントです。
+         *
+         * @return 最新10件の DailyAttendanceSummaryDto リスト
+         */
+        @GetMapping("/limitsummaries")
+        public ResponseEntity<List<DailyAttendanceSummaryDto>> getLatest10DailyAttendanceSummaries() {
+                // Service層の新しいメソッドを呼び出す
+                List<DailyAttendanceSummaryDto> latestSummaries = summaryService.findLatest10DailySummaries();
+                return ResponseEntity.ok(latestSummaries);
+        }
+
         /**
          * POST /api/summaries/approve/list
          * 勤怠サマリーIDと期間を受け取り、一括承認を実行します。（検索結果と期間による二重チェックに対応）

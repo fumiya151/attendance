@@ -4,16 +4,22 @@ import com.example.attendance.attendance_app.dto.EmployeeDto;
 import com.example.attendance.attendance_app.dto.EmployeeRegistrationRequest;
 import com.example.attendance.attendance_app.model.Employee;
 import com.example.attendance.attendance_app.model.EmployeeRole;
+import com.example.attendance.attendance_app.model.EmployeeWageHistory;
 import com.example.attendance.attendance_app.model.Role;
 import com.example.attendance.attendance_app.repository.EmployeeRepository;
 import com.example.attendance.attendance_app.repository.EmployeeRoleRepository;
+import com.example.attendance.attendance_app.repository.EmployeeWageHistoryRepository;
 import com.example.attendance.attendance_app.repository.RoleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.crypto.password.PasswordEncoder;
+
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.math.BigDecimal;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +28,7 @@ public class EmployeeService {
     private final EmployeeRepository employeeRepository;
     private final EmployeeRoleRepository employeeRoleRepository;
     private final RoleRepository roleRepository;
+    private final EmployeeWageHistoryRepository wageHistoryRepository;
     private final PasswordEncoder passwordEncoder;
 
     /**
@@ -90,6 +97,13 @@ public class EmployeeService {
         dto.setEmail(employee.getEmail());
         dto.setActive(employee.getIsActive());
         dto.setDepartment(employee.getDepartment()); // employeeテーブルのdepartment（役職名）をDTOにセット
+
+        // 現在有効な時給を取得してDTOにセット
+        wageHistoryRepository.findApplicableWageByEmployeeIdAndDate(employee.getEmployeeId(), LocalDate.now())
+                .ifPresent(wageHistory -> {
+                    dto.setWage(wageHistory.getHourlyWage().toString());
+                });
+
         return dto;
     }
 
@@ -204,6 +218,36 @@ public class EmployeeService {
                 employeeRole.setRole(newRole);
                 employeeRole.setUpdatedByEmployeeId(updaterId);
                 employeeRoleRepository.save(employeeRole);
+            }
+        }
+
+        // 時給の更新ロジック
+        if (dto.getWage() != null && !dto.getWage().isEmpty()) {
+            BigDecimal newWage = new BigDecimal(dto.getWage());
+            Optional<EmployeeWageHistory> currentWageOpt = wageHistoryRepository
+                    .findApplicableWageByEmployeeIdAndDate(employeeId, LocalDate.now());
+
+            if (currentWageOpt.isPresent()) {
+                EmployeeWageHistory currentWage = currentWageOpt.get();
+                if (currentWage.getHourlyWage().compareTo(newWage) != 0) {
+                    // 現在の時給レコードを終了させる
+                    currentWage.setEffectiveEndDate(LocalDate.now().minusDays(1));
+                    wageHistoryRepository.save(currentWage);
+
+                    // 新しい時給レコードを作成
+                    EmployeeWageHistory newWageHistory = new EmployeeWageHistory();
+                    newWageHistory.setEmployee(emp);
+                    newWageHistory.setHourlyWage(newWage);
+                    newWageHistory.setEffectiveStartDate(LocalDate.now());
+                    wageHistoryRepository.save(newWageHistory);
+                }
+            } else {
+                // 時給レコードがまだない場合、新規作成
+                EmployeeWageHistory newWageHistory = new EmployeeWageHistory();
+                newWageHistory.setEmployee(emp);
+                newWageHistory.setHourlyWage(newWage);
+                newWageHistory.setEffectiveStartDate(LocalDate.now());
+                wageHistoryRepository.save(newWageHistory);
             }
         }
 

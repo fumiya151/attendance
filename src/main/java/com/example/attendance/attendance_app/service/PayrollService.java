@@ -118,8 +118,7 @@ public class PayrollService {
                                         roundedTotalHours,
                                         roundedOvertimeHours,
                                         roundedLateNightHours,
-                                        Double.valueOf(Math.round(calculatedSalary)) // 整数に丸め
-                        ));
+                                        Double.valueOf(Math.round(calculatedSalary))));
                 }
 
                 return payrolls;

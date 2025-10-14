@@ -10,4 +10,5 @@ public class EmployeeDto {
     private String department;
     private boolean active;
     private Long roleId;
+    private String wage;
 }

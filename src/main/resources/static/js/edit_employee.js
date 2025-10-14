@@ -33,8 +33,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         form.email.value = employee.email || '';
+        form.wage.value = employee.wage || '';
         
-        // ★ 削除: 在職状況（isActive）のDOM設定ロジックを削除
         // form.querySelector(`input[name="isActive"][value="${String(employee.active)}"]`).checked = true;
 
     } catch (error) {
@@ -55,6 +55,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             name: form.name.value,
             department: selectedOption.dataset.department,
             email: form.email.value,
+            wage: form.wage.value,
             // ★ 修正: 在職状況（isActive）のロジックを削除し、DBに依存（true）させる
             active: true, 
             roleId: form.roleSelect.value
