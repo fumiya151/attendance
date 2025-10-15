@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>勤怠管理システム - 勤怠修正</title>
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+
+<body>
+    <div class="admin-dashboard">
+
+        <aside class="sidebar">
+            <h1 class="logo">勤 怠<br>管 理</h1>
+            <nav class="nav-menu">
+                <a href="admin_main.html" class="nav-item" data-target="dashboard">
+                    <span class="nav-icon-wrapper"><i class="fas fa-chart-line"></i></span>
+                    <span class="nav-text">トップ</span>
+                </a>
+                <a href="employee_management.html" class="nav-item" data-target="employees">
+                    <span class="nav-icon-wrapper"><i class="fas fa-users"></i></span>
+                    <span class="nav-text">管理</span>
+                </a>
+                <a href="attendance_log.html" class="nav-item active" data-target="attendance-logs">
+                    <span class="nav-icon-wrapper"><i class="fas fa-clock"></i></span>
+                    <span class="nav-text">勤怠</span>
+                </a>
+                <a href="payroll_calculation.html" class="nav-item" data-target="payroll">
+                    <span class="nav-icon-wrapper"><i class="fas fa-calculator"></i></span>
+                    <span class="nav-text">給与</span>
+                </a>
+                <a href="system_settings.html" class="nav-item" data-target="settings">
+                    <span class="nav-icon-wrapper"><i class="fas fa-cogs"></i></span>
+                    <span class="nav-text">設定</span>
+                </a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="header">
+                <h2>勤怠サマリーの修正</h2>
+                <div class="user-info">
+                    <span>管理者 (Admin)</span>
+                    <a href="admin_login.html" class="logout-btn">ログアウト</a>
+                </div>
+            </header>
+
+            <section class="content-view active">
+                <p class="summary-info">
+                    <span id="display-employee-name" class="label"></span>
+                    (<span id="display-work-date"></span>) の勤怠を修正します。
+                </p>
+
+                <form id="attendance-edit-form" class="form-container">
+                    <input type="hidden" id="summaryId" name="summaryId">
+                    <input type="hidden" id="employeeId" name="employeeId">
+
+                    <div class="form-group">
+                        <label for="actualInTime">出勤時刻</label>
+                        <input type="time" id="actualInTime" name="actualInTime" class="form-input" step="60" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="actualOutTime">退勤時刻</label>
+                        <input type="time" id="actualOutTime" name="actualOutTime" class="form-input" step="60" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="totalBreakMinutes">休憩時間 (分)</label>
+                        <input type="number" id="totalBreakMinutes" name="totalBreakMinutes" class="form-input" min="0" required>
+                    </div>
+
+                    <div class="form-actions" style="margin-top: 30px;">
+                        <button type="submit" class="primary-btn"><i class="fas fa-save"></i> 修正を確定</button>
+                        <a href="attendance_log.html" class="secondary-btn">キャンセル</a>
+                    </div>
+                </form>
+            </section>
+        </main>
+    </div>
+    <script src="../js/edit_attendance.js"></script>
+</body>
+
+</html>

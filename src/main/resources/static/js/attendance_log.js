@@ -150,7 +150,8 @@ async function fetchAndDisplaySummaries() {
 
     } catch (error) {
         console.error('エラー:', error);
-        document.querySelector('.data-table tbody').innerHTML = `<tr><td colspan="8" style="color: red;">エラー: ${error.message}</td></tr>`;
+        // colspan が 9列ある前提のようですが、このHTMLでは 8列（日付, 名前, 出/休/退/実働/ステータス/アクション）なので 8 を使用します
+        document.querySelector('.data-table tbody').innerHTML = `<tr><td colspan="9" style="color: red; text-align: center;">エラー: ${error.message}</td></tr>`;
     }
 }
 
@@ -160,6 +161,8 @@ async function fetchAndDisplaySummaries() {
 function populateSearchDropdowns(summaries) {
     const employeeDropdown = document.getElementById('search-employee');
     const monthDropdown = document.getElementById('search-month');
+
+    if (!employeeDropdown || !monthDropdown) return; // 別のセクションのドロップダウンかもしれないため
 
     // 1. 従業員名のリストを生成 (Setで重複を除去)
     const employeeNames = [...new Set(summaries.map(s => s.employeeName))].sort();
@@ -237,8 +240,11 @@ function applyFiltersAndRenderTable(summaries) {
     const tableBody = document.querySelector('.data-table tbody');
     tableBody.innerHTML = ''; // テーブルをクリア
 
+    // HTMLの列数に合わせて colspan を設定 (このコード内では 9列目までデータが入っている想定)
+    const COL_SPAN = 9; 
+
     if (summaries.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="8">該当する勤怠サマリーがありません。</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="${COL_SPAN}" style="text-align: center;">該当する勤怠サマリーがありません。</td></tr>`;
         return;
     }
     
@@ -274,8 +280,7 @@ function applyFiltersAndRenderTable(summaries) {
         const actions = approvalStatus === 'PENDING' ? 
             `<button class="small-btn edit-btn" data-id="${sum.id}"><i class="fas fa-pen"></i> 修正</button>
              <button class="small-btn primary-btn approve-single-btn" data-id="${sum.id}">承認</button>` :
-            `<button class="small-btn secondary-btn" data-id="${sum.id}">詳細</button>`;
-
+            `<button class="small-btn edit-btn" data-id="${sum.id}"><i class="fas fa-pen"></i> 修正</button>`; // ★承認済でも修正ボタンが表示されるロジック
 
         // 8列の描画ロジックと整形適用 (実働時間を追加)
         row.innerHTML = `
@@ -291,14 +296,29 @@ function applyFiltersAndRenderTable(summaries) {
         tableBody.appendChild(row);
     });
 
+    // -----------------------------------------------------------------
+    // ★★★ 修正機能の実装: edit-btn クリック時のイベントリスナー設定 ★★★
+    // -----------------------------------------------------------------
+    document.querySelectorAll('.edit-btn').forEach(button => {
+        button.addEventListener('click', (event) => {
+            const summaryId = event.currentTarget.dataset.id;
+            if (summaryId) {
+                // 修正専用の画面（edit_attendance.html）にIDを渡して遷移
+                window.location.href = `edit_attendance.html?summaryId=${summaryId}`;
+            }
+        });
+    });
+    // -----------------------------------------------------------------
+
+
     // 単体承認ボタンにイベントリスナーを設定
     document.querySelectorAll('.approve-single-btn').forEach(button => {
         button.addEventListener('click', async (event) => {
             const summaryId = event.currentTarget.dataset.id;
             
             // 期間入力フィールドから現在の日付を取得
-            let startDate = document.getElementById('approval-start-date').value;
-            let endDate = document.getElementById('approval-end-date').value;
+            let startDate = document.getElementById('approval-start-date')?.value;
+            let endDate = document.getElementById('approval-end-date')?.value;
             
             // ★ 修正: 期間入力が空の場合、本日をデフォルトとして使用 ★
             if (!startDate || !endDate) {
@@ -358,7 +378,7 @@ function applyFiltersAndRenderTable(summaries) {
 // --- PDF生成・ダウンロード関数 (API経由に修正) ---
 /**
  * 指定された従業員と月の勤務表PDFをバックエンドAPI経由で取得し、ダウンロードします。
- * * @param {string} employeeId 対象従業員ID
+ * @param {string} employeeId 対象従業員ID
  * @param {string} yearMonthStr 対象年月 (YYYY-MM)
  * @param {string} employeeName ファイル名表示用の従業員名
  */
@@ -381,7 +401,8 @@ async function exportToPdf(employeeId, yearMonthStr, employeeName) {
         if (!response.ok) {
             // エラー応答がテキスト（日本語メッセージ）の場合を考慮
             const errorText = await response.text();
-            throw new Error(`PDF生成APIエラー (${response.status}): ${errorText.substring(0, 100)}...`);
+            // substring(0, 100) を使用しているため、エラーが長すぎる場合も安心
+            throw new Error(`PDF生成APIエラー (${response.status}): ${errorText.substring(0, 100)}...`); 
         }
 
         // レスポンスがバイナリデータ（PDF）であると想定
@@ -395,7 +416,7 @@ async function exportToPdf(employeeId, yearMonthStr, employeeName) {
             // ヘッダーからファイル名を取得するロジック（URLエンコードされている場合に対応）
             const filenameMatch = disposition.match(/filename\*=UTF-8''(.+)/i);
             if (filenameMatch && filenameMatch[1]) {
-                 // エンコードされたファイル名をデコード
+                // エンコードされたファイル名をデコード
                 filename = decodeURIComponent(filenameMatch[1]);
             }
         }

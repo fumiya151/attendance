@@ -76,4 +76,46 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
          * @return 打刻日時降順にソートされた全打刻レコードのリスト
          */
         List<Attendance> findAllByOrderByStampTimeDesc();
+
+        /**
+         * 指定された勤務日と打刻種別において、最も古い打刻レコードを取得します。
+         *
+         * 【機能】
+         * 従業員IDと期間に一致するレコードのうち、stampTypeが一致し、最も古いstampTimeを持つレコードを1件取得します。
+         *
+         * 【注意事項】
+         * サマリー修正時、IN打刻のstampTimeを修正するために使用されます。
+         *
+         * @param employeeId    対象従業員ID
+         * @param stampType     打刻種別 (例: "IN")
+         * @param startDateTime 検索開始日時（含む）
+         * @param endDateTime   検索終了日時（含まない）
+         * @return 該当する最も古い打刻レコード（Optional）
+         */
+        Optional<Attendance> findTopByEmployeeEmployeeIdAndStampTypeAndStampTimeBetweenOrderByStampTimeAsc(
+                        String employeeId,
+                        String stampType,
+                        OffsetDateTime startDateTime,
+                        OffsetDateTime endDateTime);
+
+        /**
+         * 指定された勤務日と打刻種別において、最も新しい打刻レコードを取得します。
+         *
+         * 【機能】
+         * 従業員IDと期間に一致するレコードのうち、stampTypeが一致し、最も新しいstampTimeを持つレコードを1件取得します。
+         *
+         * 【注意事項】
+         * サマリー修正時、OUT打刻のstampTimeを修正するために使用されます。
+         *
+         * @param employeeId    対象従業員ID
+         * @param stampType     打刻種別 (例: "OUT")
+         * @param startDateTime 検索開始日時（含む）
+         * @param endDateTime   検索終了日時（含まない）
+         * @return 該当する最も新しい打刻レコード（Optional）
+         */
+        Optional<Attendance> findTopByEmployeeEmployeeIdAndStampTypeAndStampTimeBetweenOrderByStampTimeDesc(
+                        String employeeId,
+                        String stampType,
+                        OffsetDateTime startDateTime,
+                        OffsetDateTime endDateTime);
 }

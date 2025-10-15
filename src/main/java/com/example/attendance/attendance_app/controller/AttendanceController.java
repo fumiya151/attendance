@@ -20,7 +20,7 @@ public class AttendanceController {
 
         private final AttendanceService attendanceService;
 
-        // ★ 定数として操作者IDのヘッダー名を定義
+        // 操作者IDのヘッダー名を定義
         private static final String OPERATOR_HEADER = "X-Operator-Id";
 
         /**

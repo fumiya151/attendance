@@ -43,6 +43,36 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AttendancePdfService {
 
+    // --- クラス定数定義 ---
+    private static final String FONT_PATH = "src/main/resources/ipaexg.ttf";
+    private static final String FONT_ERROR_MESSAGE = "日本語フォントの読み込みに失敗しました。プロジェクトのリソースに " + FONT_PATH
+            + " が存在するか確認してください。";
+
+    private static final float FONT_SIZE_BASE = 10f;
+    private static final float FONT_SIZE_TITLE = 16f;
+    private static final float FONT_SIZE_NAME = 12f;
+    private static final float FONT_SIZE_DATE = 8f;
+    private static final float FONT_SIZE_HEADER = 9f;
+
+    private static final int STANDARD_WORK_MINUTES = 8 * 60; // 480分
+    private static final String DEFAULT_TIME_DISPLAY = "---";
+    private static final String FORMAT_HH_MM = "HH:mm";
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern(FORMAT_HH_MM);
+    private static final String FORMAT_DECIMAL_HOURS = "%.1f";
+    private static final String UNIT_MINUTES = "分";
+    private static final String UNIT_HOURS = "時間";
+
+    private static final String STATUS_PENDING = "PENDING";
+    private static final String STATUS_APPROVED = "APPROVED";
+    private static final String STATUS_FINALIZED = "FINALIZED";
+    private static final String DISPLAY_PENDING = "承認待ち";
+    private static final String DISPLAY_APPROVED = "承認済";
+    private static final String[] HEADERS = {
+            "日付", "曜日", "出勤時刻", "退勤時刻", "休憩(" + UNIT_MINUTES + ")", "実働時間", "残業時間", "備考/承認"
+    };
+    private static final float[] COLUMN_WIDTHS = { 1.5f, 1f, 2f, 2f, 1.5f, 2f, 2f, 2.5f };
+    private static final int COLSPAN_TOTAL_SUMMARY = 5; // ★追加定数：集計行の結合数★
+
     /**
      * 勤怠サマリーリストから月次勤務表形式のPDFファイルを生成します。
      *
@@ -66,18 +96,14 @@ public class AttendancePdfService {
 
         // --- 1. 日本語フォントの設定 ---
         PdfFont japaneseFont;
-        // プロジェクトのリソースパスからフォントファイルを読み込む
-        String FONT_PATH = "src/main/resources/ipaexg.ttf";
-
         try {
             japaneseFont = PdfFontFactory.createFont(FONT_PATH, PdfEncodings.IDENTITY_H);
         } catch (IOException e) {
-            System.err.println("日本語フォントの読み込みに失敗しました。プロジェクトのリソースに " + FONT_PATH + " が存在するか確認してください。");
+            System.err.println(FONT_ERROR_MESSAGE);
             // 予備: 標準フォントを使用 (日本語部分は文字化けします)
             japaneseFont = PdfFontFactory.createFont(StandardFonts.HELVETICA);
         }
-
-        document.setFont(japaneseFont).setFontSize(10);
+        document.setFont(japaneseFont).setFontSize(FONT_SIZE_BASE);
 
         // --- 2. データの事前準備 ---
         if (summaries.isEmpty()) {
@@ -97,23 +123,20 @@ public class AttendancePdfService {
 
         // --- 3. タイトルと情報の追加 ---
         document.add(new Paragraph(targetMonth.getYear() + "年" + targetMonth.getMonthValue() + "月度 勤務表")
-                .setFontSize(16).setBold());
-        document.add(new Paragraph("氏名: " + employeeName).setFontSize(12));
-        document.add(new Paragraph("出力日: " + LocalDate.now().toString()).setFontSize(8));
+                .setFontSize(FONT_SIZE_TITLE).setBold());
+        document.add(new Paragraph("氏名: " + employeeName).setFontSize(FONT_SIZE_NAME));
+        document.add(new Paragraph("出力日: " + LocalDate.now().toString()).setFontSize(FONT_SIZE_DATE));
         document.add(new Paragraph(" ")); // スペーサー
 
         // --- 4. 勤務表テーブルの作成 ---
-        // 8列: 日付, 曜日, 出勤, 退勤, 休憩, 実働, 残業, 備考/承認
-        float[] columnWidths = { 1.5f, 1f, 2f, 2f, 1.5f, 2f, 2f, 2.5f };
-        Table table = new Table(UnitValue.createPercentArray(columnWidths));
+        Table table = new Table(UnitValue.createPercentArray(COLUMN_WIDTHS));
         table.setWidth(UnitValue.createPercentValue(100));
 
         // ヘッダー行
-        String[] headers = { "日付", "曜日", "出勤時刻", "退勤時刻", "休憩(分)", "実働時間", "残業時間", "備考/承認" }; // 休憩時間も分表示に戻しました
-        for (String header : headers) {
+        for (String header : HEADERS) {
             table.addHeaderCell(new Paragraph(header)
                     .setFont(japaneseFont)
-                    .setFontSize(9)
+                    .setFontSize(FONT_SIZE_HEADER)
                     .setBold());
         }
 
@@ -133,40 +156,43 @@ public class AttendancePdfService {
             if (dailyData != null) {
                 // データが存在する場合
                 long totalWorkMinutes = dailyData.getTotalWorkMinutes() != null ? dailyData.getTotalWorkMinutes() : 0;
-                long overtimeMinutes = Math.max(totalWorkMinutes - (8 * 60), 0); // 標準8時間 (480分) 超過分
+                long overtimeMinutes = Math.max(totalWorkMinutes - STANDARD_WORK_MINUTES, 0);
 
                 totalWorkMinutesSum += totalWorkMinutes;
                 totalOvertimeMinutesSum += overtimeMinutes;
 
                 String approvalStatus = dailyData.getApprovalStatus();
-                String approvalText = "PENDING".equals(approvalStatus) ? "承認待ち"
-                        : ("APPROVED".equals(approvalStatus) || "FINALIZED".equals(approvalStatus)) ? "承認済" : "---";
+                String approvalText = STATUS_PENDING.equals(approvalStatus) ? DISPLAY_PENDING
+                        : (STATUS_APPROVED.equals(approvalStatus) || STATUS_FINALIZED.equals(approvalStatus))
+                                ? DISPLAY_APPROVED
+                                : DEFAULT_TIME_DISPLAY;
 
-                // ★ 実働時間と残業時間を「X.Y時間」形式に変換して表示 ★
-                String formattedWorkTime = formatMinutesToDecimalHours(totalWorkMinutes) + "時間";
-                String formattedOvertime = formatMinutesToDecimalHours(overtimeMinutes) + "時間";
+                // 実働時間と残業時間を「X.Y時間」形式に変換して表示
+                String formattedWorkTime = formatMinutesToDecimalHours(totalWorkMinutes) + UNIT_HOURS;
+                String formattedOvertime = formatMinutesToDecimalHours(overtimeMinutes) + UNIT_HOURS;
 
                 table.addCell(formatTime(dailyData.getActualInTime()));
                 table.addCell(formatTime(dailyData.getActualOutTime()));
                 table.addCell(
-                        dailyData.getTotalBreakMinutes() != null ? dailyData.getTotalBreakMinutes() + "分" : "---"); // 休憩時間は分単位のまま
-                table.addCell(totalWorkMinutes > 0 ? formattedWorkTime : "---"); // 修正適用
-                table.addCell(overtimeMinutes > 0 ? formattedOvertime : "---"); // 修正適用
+                        dailyData.getTotalBreakMinutes() != null ? dailyData.getTotalBreakMinutes() + UNIT_MINUTES
+                                : DEFAULT_TIME_DISPLAY);
+                table.addCell(totalWorkMinutes > 0 ? formattedWorkTime : DEFAULT_TIME_DISPLAY);
+                table.addCell(overtimeMinutes > 0 ? formattedOvertime : DEFAULT_TIME_DISPLAY);
                 table.addCell(approvalText);
             } else {
                 // データが存在しない日（未出勤、公休など）
-                table.addCell("").addCell("").addCell("").addCell("").addCell("").addCell("");
+                table.addCell(DEFAULT_TIME_DISPLAY).addCell(DEFAULT_TIME_DISPLAY).addCell(DEFAULT_TIME_DISPLAY)
+                        .addCell(DEFAULT_TIME_DISPLAY).addCell(DEFAULT_TIME_DISPLAY).addCell(DEFAULT_TIME_DISPLAY);
             }
         }
 
         // 5. 集計行の追加
-        // ★ 月次合計も「X.Y時間」形式に変換して表示 ★
-        String formattedTotalWorkSum = formatMinutesToDecimalHours(totalWorkMinutesSum) + "時間";
-        String formattedTotalOvertimeSum = formatMinutesToDecimalHours(totalOvertimeMinutesSum) + "時間";
+        String formattedTotalWorkSum = formatMinutesToDecimalHours(totalWorkMinutesSum) + UNIT_HOURS;
+        String formattedTotalOvertimeSum = formatMinutesToDecimalHours(totalOvertimeMinutesSum) + UNIT_HOURS;
 
-        table.addCell(new Cell(1, 5).add(new Paragraph("月次合計").setBold()));
-        table.addCell(new Paragraph(formattedTotalWorkSum).setBold()); // 修正適用
-        table.addCell(new Paragraph(formattedTotalOvertimeSum).setBold()); // 修正適用
+        table.addCell(new Cell(1, COLSPAN_TOTAL_SUMMARY).add(new Paragraph("月次合計").setBold()));
+        table.addCell(new Paragraph(formattedTotalWorkSum).setBold());
+        table.addCell(new Paragraph(formattedTotalOvertimeSum).setBold());
         table.addCell(""); // 備考/承認
 
         document.add(table);
@@ -189,9 +215,9 @@ public class AttendancePdfService {
      */
     private String formatTime(LocalTime time) {
         if (time == null) {
-            return "---";
+            return DEFAULT_TIME_DISPLAY;
         }
-        return time.format(DateTimeFormatter.ofPattern("HH:mm"));
+        return time.format(TIME_FORMATTER);
     }
 
     /**
@@ -211,8 +237,6 @@ public class AttendancePdfService {
             return "0.0";
         }
         double hours = minutes / 60.0;
-        // 小数点以下第一位に四捨五入して、文字列に変換
-        // 例: 140.5時間
-        return String.format(Locale.US, "%.1f", hours);
+        return String.format(Locale.US, FORMAT_DECIMAL_HOURS, hours);
     }
 }

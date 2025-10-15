@@ -22,7 +22,7 @@ public interface DailyAttendanceSummaryRepository extends JpaRepository<DailyAtt
      *
      * @return 最新10件の DailyAttendanceSummaryエンティティのリスト
      */
-    List<DailyAttendanceSummary> findTop10ByOrderByIdDesc(); // ★★★ 追加: 最新10件を取得するメソッド ★★★
+    List<DailyAttendanceSummary> findTop10ByOrderByIdDesc();
 
     /**
      * 指定された従業員IDと日付の勤怠集計レコードを検索します。

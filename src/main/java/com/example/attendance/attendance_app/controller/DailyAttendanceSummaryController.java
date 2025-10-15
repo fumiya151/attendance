@@ -23,6 +23,49 @@ public class DailyAttendanceSummaryController {
 
         private static final String OPERATOR_HEADER = "X-Operator-Id";
 
+        // --- 新規追加: 単体サマリー取得API (GET /api/summaries/{id}) ---
+        /**
+         * 指定されたIDの勤怠サマリーレコードを単体で取得するAPIエンドポイントです。
+         *
+         * 【機能】
+         * パス変数で渡されたIDに一致する DailyAttendanceSummaryDto を返却します。
+         *
+         * 【注意事項】
+         * 主に勤怠修正画面の初期データ表示のために使用されます。データが見つからない場合は 404 Not Found を返します。
+         *
+         * @param id 勤怠サマリーID (主キー)
+         * @return DailyAttendanceSummaryDto
+         */
+        @GetMapping("/{id}")
+        public ResponseEntity<DailyAttendanceSummaryDto> getSummaryById(@PathVariable Long id) {
+                DailyAttendanceSummaryDto dto = summaryService.getSummaryDtoById(id);
+                return ResponseEntity.ok(dto);
+        }
+
+        /**
+         * 指定された勤怠サマリーを更新するAPIエンドポイントです。
+         *
+         * 【機能】
+         * 修正された出勤・退勤・休憩時間を受信し、Service層で再集計ロジックを実行して勤怠サマリーを更新します。
+         *
+         * 【注意事項】
+         * 修正操作を行ったオペレーターのIDがヘッダーから取得され、更新者として記録されます。
+         *
+         * @param id         勤怠サマリーID (主キー)
+         * @param requestDto 修正後の勤怠データを含むDTO
+         * @param operatorId HTTPヘッダー（X-Operator-Idを取得）
+         * @return 更新後の DailyAttendanceSummaryDto
+         */
+        @PutMapping("/{id}")
+        public ResponseEntity<DailyAttendanceSummaryDto> updateSummary(
+                        @PathVariable Long id,
+                        @RequestBody DailyAttendanceSummaryDto requestDto,
+                        @RequestHeader(OPERATOR_HEADER) String operatorId) {
+
+                DailyAttendanceSummaryDto updatedDto = summaryService.updateSummary(id, requestDto, operatorId);
+                return ResponseEntity.ok(updatedDto);
+        }
+
         /**
          * 指定された年月の月次勤怠集計データを取得するAPIエンドポイントです。
          *

@@ -363,7 +363,7 @@ function applyFiltersAndRenderTable(summaries) {
         const actions = approvalStatus === 'PENDING' ? 
             `<button class="small-btn edit-btn" data-id="${sum.id}"><i class="fas fa-pen"></i> 修正</button>
              <button class="small-btn primary-btn approve-single-btn" data-id="${sum.id}">承認</button>` :
-            `<button class="small-btn secondary-btn" data-id="${sum.id}">詳細</button>`;
+            `<button class="small-btn edit-btn" data-id="${sum.id}"><i class="fas fa-pen"></i> 修正</button>`;
 
 
         // HTMLの9列構成に合わせて描画ロジックを修正

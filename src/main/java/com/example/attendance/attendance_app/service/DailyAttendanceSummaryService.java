@@ -4,6 +4,7 @@ import com.example.attendance.attendance_app.model.DailyAttendanceSummary;
 import com.example.attendance.attendance_app.model.Employee;
 import com.example.attendance.attendance_app.repository.DailyAttendanceSummaryRepository;
 import com.example.attendance.attendance_app.repository.EmployeeRepository;
+import com.example.attendance.attendance_app.repository.AttendanceRepository;
 import com.example.attendance.attendance_app.dto.DailyAttendanceSummaryDto;
 import com.example.attendance.attendance_app.dto.MonthlySummaryDto;
 import lombok.RequiredArgsConstructor;
@@ -11,9 +12,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -25,12 +28,162 @@ public class DailyAttendanceSummaryService {
 
     private final DailyAttendanceSummaryRepository summaryRepository;
     private final EmployeeRepository employeeRepository;
-    // PDF生成の責務は AttendancePdfService が持つため、ここでのインジェクションは削除します。
-    // private final AttendancePdfService pdfService; // 削除
+    private final AttendanceRepository attendanceRepository;
 
     private static final String STATUS_APPROVED = "APPROVED";
     private static final String STATUS_PENDING = "PENDING";
     private static final ZoneId JST_ZONE = ZoneId.of("Asia/Tokyo");
+    private static final LocalTime WORK_DAY_START_TIME = LocalTime.of(9, 0); // 勤務日の区切り時刻（例: 9:00 JST）
+
+    /**
+     * 指定されたIDの勤怠サマリーをDTO形式で取得します。
+     *
+     * 【機能】
+     * IDに基づいて DailyAttendanceSummary エンティティを取得し、従業員名を付与した DTO に変換して返却します。
+     *
+     * 【注意事項】
+     * 該当IDのデータが存在しない場合、RuntimeException（または適切なカスタム例外）をスローします。
+     *
+     * @param id 勤怠サマリーID (主キー)
+     * @return DailyAttendanceSummaryDto
+     */
+    public DailyAttendanceSummaryDto getSummaryDtoById(Long id) {
+        DailyAttendanceSummary summary = summaryRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("勤怠サマリーID: " + id + " のデータが見つかりません。"));
+
+        // 従業員名取得のためのマップを生成
+        Map<String, String> employeeNameMap = employeeRepository.findAll().stream()
+                .collect(Collectors.toMap(Employee::getEmployeeId, Employee::getName,
+                        (existing, replacement) -> existing));
+
+        return convertToDailySummaryDto(summary, employeeNameMap);
+    }
+
+    /**
+     * 勤怠サマリーの出退勤時刻、休憩時間を修正し、関連する集計値を再計算して更新します。
+     *
+     * 【機能】
+     * リクエストDTOに基づき、エンティティの出勤、退勤、休憩時間を更新し、
+     * **対応する生ログ（Attendance）の打刻時刻も修正**します。ステータスは **PENDING** に戻されます。
+     *
+     * 【注意事項】
+     * このメソッドはトランザクション内で実行されます。エンティティの更新者IDが設定されます。集計日時はエンティティのJPAライフサイクルで自動更新されます。
+     *
+     * @param id         勤怠サマリーID
+     * @param requestDto 修正データを含むDTO
+     * @param operatorId 修正操作を行った従業員ID
+     * @return 更新後の DailyAttendanceSummaryDto
+     */
+    @Transactional
+    public DailyAttendanceSummaryDto updateSummary(
+            Long id,
+            DailyAttendanceSummaryDto requestDto,
+            String operatorId) {
+
+        DailyAttendanceSummary summary = summaryRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("勤怠サマリーID: " + id + " のデータが見つかりません。"));
+
+        // 1. 生ログ（Attendance）を新しい時刻で更新する
+        updateAttendanceLogs(summary, requestDto, operatorId);
+
+        // 2. サマリーエンティティの値をリクエストDTOで上書き
+        summary.setActualInTime(requestDto.getActualInTime());
+        summary.setActualOutTime(requestDto.getActualOutTime());
+        summary.setTotalBreakMinutes(requestDto.getTotalBreakMinutes());
+
+        // 3. 総労働時間を再計算
+        long totalWorkMinutes = calculateTotalWorkMinutes(
+                summary.getActualInTime(),
+                summary.getActualOutTime(),
+                summary.getTotalBreakMinutes());
+
+        summary.setTotalWorkMinutes((int) totalWorkMinutes); // TotalWorkMinutesはInteger型
+
+        // 4. ステータスを PENDING にリセットし、監査情報を更新
+        summary.setStatus(STATUS_PENDING);
+        summary.setUpdatedById(operatorId);
+
+        // 5. 保存 (calculatedAtは@PreUpdateで自動更新)
+        DailyAttendanceSummary savedSummary = summaryRepository.save(summary);
+
+        // 6. DTOに変換して返却
+        Map<String, String> employeeNameMap = employeeRepository.findAll().stream()
+                .collect(Collectors.toMap(Employee::getEmployeeId, Employee::getName,
+                        (existing, replacement) -> existing));
+
+        return convertToDailySummaryDto(savedSummary, employeeNameMap);
+    }
+
+    /**
+     * 勤怠サマリーの修正時刻に基づき、対応するAttendance生ログを更新する。
+     * * 【機能】
+     * 修正対象日の最初/最後の打刻レコードを特定し、その打刻時刻を修正後の時刻に上書き保存します。
+     *
+     * @param summary    元となる勤怠サマリーエンティティ
+     * @param requestDto 修正後の勤怠データ
+     * @param operatorId 修正者ID
+     */
+    private void updateAttendanceLogs(DailyAttendanceSummary summary, DailyAttendanceSummaryDto requestDto,
+            String operatorId) {
+
+        LocalDate workDate = summary.getWorkDate();
+        String employeeId = summary.getEmployeeId();
+
+        // 勤務日の検索期間を定義 (前日9:00から当日9:00までが「当日勤務日」と仮定)
+        OffsetDateTime start = workDate.minusDays(1).atTime(WORK_DAY_START_TIME).atZone(JST_ZONE).toOffsetDateTime();
+        OffsetDateTime end = workDate.atTime(WORK_DAY_START_TIME).atZone(JST_ZONE).toOffsetDateTime();
+
+        // 1. 最初の IN 打刻を見つけて更新
+        attendanceRepository.findTopByEmployeeEmployeeIdAndStampTypeAndStampTimeBetweenOrderByStampTimeAsc(
+                employeeId, "IN", start, end)
+                .ifPresent(inLog -> {
+                    inLog.setStampTime(
+                            workDate.atTime(requestDto.getActualInTime()).atZone(JST_ZONE).toOffsetDateTime());
+                    // inLog.setUpdatedById(operatorId); // ★修正点: 該当メソッドが存在しないため削除★
+                    attendanceRepository.save(inLog);
+                });
+
+        // 2. 最後の OUT 打刻を見つけて更新
+        attendanceRepository.findTopByEmployeeEmployeeIdAndStampTypeAndStampTimeBetweenOrderByStampTimeDesc(
+                employeeId, "OUT", start, end)
+                .ifPresent(outLog -> {
+                    outLog.setStampTime(
+                            workDate.atTime(requestDto.getActualOutTime()).atZone(JST_ZONE).toOffsetDateTime());
+                    // outLog.setUpdatedById(operatorId); // ★修正点: 該当メソッドが存在しないため削除★
+                    attendanceRepository.save(outLog);
+                });
+    }
+
+    /**
+     * 出勤時刻、退勤時刻、休憩時間に基づき、総労働時間（分）を計算するヘルパーメソッド。
+     *
+     * 【機能】
+     * (退勤時刻 - 出勤時刻) から休憩時間（分）を引いた実労働時間（分）を計算します。
+     *
+     * 【注意事項】
+     * 24時間以内の勤務を想定します。計算結果が0未満になることは想定されていません。
+     *
+     * @param inTime       出勤時刻
+     * @param outTime      退勤時刻
+     * @param breakMinutes 休憩時間（分）
+     * @return 実労働時間（分）
+     */
+    private long calculateTotalWorkMinutes(LocalTime inTime, LocalTime outTime, long breakMinutes) {
+        if (inTime == null || outTime == null || breakMinutes < 0) {
+            return 0;
+        }
+
+        // 差分を分単位で計算
+        long durationMinutes = ChronoUnit.MINUTES.between(inTime, outTime);
+
+        // 勤務時間が翌日にまたがっている場合の処理 (例: 22:00 -> 02:00)
+        if (durationMinutes < 0) {
+            durationMinutes += (24 * 60); // 1日（1440分）を加算
+        }
+
+        // 休憩時間を引く
+        return Math.max(0, durationMinutes - breakMinutes);
+    }
 
     /**
      * 指定された月度の全従業員の勤怠サマリーを集計するメソッドです。
@@ -244,6 +397,7 @@ public class DailyAttendanceSummaryService {
         dto.setWorkDate(summary.getWorkDate());
         dto.setActualInTime(summary.getActualInTime());
         dto.setActualOutTime(summary.getActualOutTime());
+
         dto.setTotalBreakMinutes(summary.getTotalBreakMinutes());
         dto.setTotalWorkMinutes(summary.getTotalWorkMinutes());
 
