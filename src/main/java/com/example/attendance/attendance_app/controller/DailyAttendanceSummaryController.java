@@ -45,7 +45,6 @@ public class DailyAttendanceSummaryController {
                 return summaryService.getAllSummariesWithEmployeeInfo();
         }
 
-        // ★★★ 修正後のメソッド: 最新10件の日次サマリーをDTOとして取得 ★★★
         /**
          * 最新の勤怠サマリー10件を新しい順に取得するAPIエンドポイントです。
          *
@@ -63,7 +62,7 @@ public class DailyAttendanceSummaryController {
          * 勤怠サマリーIDと期間を受け取り、一括承認を実行します。（検索結果と期間による二重チェックに対応）
          * 単体承認の場合も、ID 1件と期間を送信することでこのエンドポイントが処理します。
          *
-         * @param operatorId  HTTPヘッダー（X-Operator-Idを取得）
+         * @param operatorId    HTTPヘッダー（X-Operator-Idを取得）
          * @param requestBody JSONボディ（summaryIds, startDate, endDate）
          * @return 承認されたレコード数を含む応答
          */

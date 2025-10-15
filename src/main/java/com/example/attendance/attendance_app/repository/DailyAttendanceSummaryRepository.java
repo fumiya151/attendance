@@ -47,4 +47,6 @@ public interface DailyAttendanceSummaryRepository extends JpaRepository<DailyAtt
      * @return 条件に一致するDailyAttendanceSummaryエンティティのリスト
      */
     List<DailyAttendanceSummary> findByWorkDateBetween(LocalDate startDate, LocalDate endDate);
+
+    List<DailyAttendanceSummary> findByEmployeeIdAndWorkDateBetween(String employeeId, LocalDate startDate, LocalDate endDate);
 }

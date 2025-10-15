@@ -128,11 +128,11 @@ public class AttendanceService {
         attendance.setEmployee(employee);
         OffsetDateTime stampTime = OffsetDateTime.now(JST_ZONE);
         attendance.setStampTime(stampTime);
-        attendance.setStampType(request.getAttendanceType());
+        attendance.setStampType(request.getStampType());
 
         Attendance savedAttendance = attendanceRepository.save(attendance);
 
-        if (request.getAttendanceType().equals(workEd)) {
+        if (request.getStampType().equals(workEd)) {
             // 退勤時刻から「勤務日」を計算する
             LocalDate workDate = getWorkDate(stampTime);
             processCheckoutSummary(request.getEmployeeId(), workDate, operatorId);

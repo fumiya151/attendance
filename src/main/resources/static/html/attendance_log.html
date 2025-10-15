@@ -16,23 +16,23 @@
             <h1 class="logo">勤 怠<br>管 理</h1>
             <nav class="nav-menu">
                 <a href="admin_main.html" class="nav-item" data-target="dashboard">
-                    <span class="nav-icon-wrapper"><i class="fas fa-chart-line"></i></span> 
+                    <span class="nav-icon-wrapper"><i class="fas fa-chart-line"></i></span>
                     <span class="nav-text">トップ</span>
                 </a>
                 <a href="employee_management.html" class="nav-item" data-target="employees">
-                    <span class="nav-icon-wrapper"><i class="fas fa-users"></i></span> 
+                    <span class="nav-icon-wrapper"><i class="fas fa-users"></i></span>
                     <span class="nav-text">管理</span>
                 </a>
                 <a href="attendance_log.html" class="nav-item active" data-target="attendance-logs">
-                    <span class="nav-icon-wrapper"><i class="fas fa-clock"></i></span> 
+                    <span class="nav-icon-wrapper"><i class="fas fa-clock"></i></span>
                     <span class="nav-text">勤怠</span>
                 </a>
                 <a href="payroll_calculation.html" class="nav-item" data-target="payroll">
-                    <span class="nav-icon-wrapper"><i class="fas fa-calculator"></i></span> 
+                    <span class="nav-icon-wrapper"><i class="fas fa-calculator"></i></span>
                     <span class="nav-text">給与</span>
                 </a>
                 <a href="system_settings.html" class="nav-item" data-target="settings">
-                    <span class="nav-icon-wrapper"><i class="fas fa-cogs"></i></span> 
+                    <span class="nav-icon-wrapper"><i class="fas fa-cogs"></i></span>
                     <span class="nav-text">設定</span>
                 </a>
             </nav>
@@ -49,34 +49,34 @@
 
             <section id="attendance-logs" class="content-view">
                 <h3>日次勤怠サマリー修正・承認</h3>
-                
+
                 <h4>勤怠承認（給与計算準備）</h4>
                 <div class="action-bar approval-bar">
                     <label for="approval-start-date">期間:</label>
                     <input type="date" id="approval-start-date" class="search-input" value="2025-09-01">
                     <span>〜</span>
                     <input type="date" id="approval-end-date" class="search-input" value="2025-09-30">
-                    
+
                     <button class="primary-btn export-btn" id="batch-approve-btn">
                         <i class="fas fa-check-double"></i> 期間一括承認
                     </button>
-                    <button class="secondary-btn" id="csv-export-btn"><i class="fas fa-file-export"></i> PDF出力</button>
+                    <button class="secondary-btn" id="csv-export-btn"><i class="fas fa-file-pdf"></i> 月次勤務表PDF出力</button>
                 </div>
-                
+
                 <hr>
 
                 <h4>勤怠ログの検索・修正</h4>
                 <div class="action-bar search-controls">
-                    
+
                     <label for="search-month">対象月:</label>
                     <select id="search-month" class="search-select">
                         <option value="">--- 全期間 ---</option>
-                        </select>
+                    </select>
 
                     <label for="search-employee">従業員名:</label>
                     <select id="search-employee" class="search-select">
                         <option value="">--- 全従業員 ---</option>
-                        </select>
+                    </select>
 
                     <button class="primary-btn" id="search-button"><i class="fas fa-search"></i> 検索</button>
                 </div>
@@ -89,7 +89,8 @@
                             <th>出勤時刻</th>
                             <th>休憩時間</th>
                             <th>退勤時刻</th>
-                            <th>承認状態</th> 
+                            <th>実働時間</th>
+                            <th>承認状態</th>
                             <th>アクション</th>
                         </tr>
                     </thead>

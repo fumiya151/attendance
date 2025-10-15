@@ -7,6 +7,17 @@ function getLoggedInEmployeeId() {
     return employeeId;
 }
 
+/**
+ * 現在のデータリストから従業員名に対応する従業員IDを検索します。
+ * @param {string} employeeName 検索対象の従業員名
+ * @returns {string | null} 従業員ID、見つからない場合はnull
+ */
+function getEmployeeIdFromName(employeeName) {
+    // allSummaries から検索
+    const summary = allSummaries.find(s => s.employeeName === employeeName);
+    return summary ? summary.employeeId : null;
+}
+
 
 // 取得した全サマリーを保持するためのグローバル変数
 let allSummaries = []; 
@@ -91,17 +102,30 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // PDFエクスポートボタンのイベントリスナー
+    // PDFエクスポートボタンのイベントリスナー (修正)
     const pdfExportBtn = document.getElementById('csv-export-btn'); // IDは元のまま使用
     if (pdfExportBtn) {
         pdfExportBtn.addEventListener('click', () => {
-            if (currentDisplayedSummaries.length === 0) {
-                alert("エクスポートする勤怠ログがありません。");
+            
+            // ★ バックエンドAPIに合わせたデータチェック ★
+            const selectedMonth = document.getElementById('search-month').value;
+            const selectedEmployeeName = document.getElementById('search-employee').value;
+
+            if (!selectedEmployeeName || !selectedMonth) {
+                alert("PDFエクスポートを行うには、検索プルダウンで対象の【従業員】と【月】を一つずつ選択してください。");
+                return;
+            }
+            
+            // 選択された従業員名から従業員IDを取得
+            const employeeId = getEmployeeIdFromName(selectedEmployeeName);
+
+            if (!employeeId) {
+                alert(`従業員名 "${selectedEmployeeName}" のIDが見つかりません。`);
                 return;
             }
 
-            // PDF出力関数を呼び出す
-            exportToPdf(); 
+            // 新しい PDF出力関数を呼び出す
+            exportToPdf(employeeId, selectedMonth, selectedEmployeeName); 
         });
     }
 });
@@ -221,8 +245,9 @@ function applyFiltersAndRenderTable(summaries) {
     // 時刻整形ヘルパー関数を定義
     const formatTime = (timeString) => {
         if (!timeString) return '---';
-        const parts = timeString.split('.');
-        return parts[0]; 
+        // JSONで受け取る時刻文字列（例: "09:00:00.000000"）をHH:mmに整形
+        const parts = timeString.split(':');
+        return parts.length >= 2 ? `${parts[0]}:${parts[1]}` : '---'; 
     };
 
 
@@ -252,13 +277,14 @@ function applyFiltersAndRenderTable(summaries) {
             `<button class="small-btn secondary-btn" data-id="${sum.id}">詳細</button>`;
 
 
-        // 8列の描画ロジックと整形適用
+        // 8列の描画ロジックと整形適用 (実働時間を追加)
         row.innerHTML = `
             <td>${sum.workDate}</td>
             <td>${sum.employeeName}</td>
             <td>${formatTime(sum.actualInTime)}</td> 
-            <td>${sum.totalBreakMinutes ? (sum.totalBreakMinutes + '分') : '---'}</td> 
             <td>${formatTime(sum.actualOutTime)}</td>
+            <td>${sum.totalBreakMinutes ? (sum.totalBreakMinutes + '分') : '---'}</td> 
+            <td>${sum.totalWorkMinutes ? (sum.totalWorkMinutes + '分') : '---'}</td> 
             <td><span class="${approvalClass}">${approvalText}</span></td> 
             <td>${actions}</td>
         `;
@@ -329,22 +355,15 @@ function applyFiltersAndRenderTable(summaries) {
 }
 
 
-// --- PDF生成・ダウンロード関数 ---
+// --- PDF生成・ダウンロード関数 (API経由に修正) ---
 /**
- * 現在表示されているテーブルをキャプチャし、PDFとして出力します。
- * html2canvasとjsPDFが必要です。
+ * 指定された従業員と月の勤務表PDFをバックエンドAPI経由で取得し、ダウンロードします。
+ * * @param {string} employeeId 対象従業員ID
+ * @param {string} yearMonthStr 対象年月 (YYYY-MM)
+ * @param {string} employeeName ファイル名表示用の従業員名
  */
-async function exportToPdf() {
-    const tableElement = document.querySelector('.data-table');
-    if (!tableElement) {
-        alert("テーブル要素が見つかりません。");
-        return;
-    }
+async function exportToPdf(employeeId, yearMonthStr, employeeName) {
     
-    // ファイル名生成 (例: attendance_2025-10-14.pdf)
-    const today = new Date().toISOString().substring(0, 10);
-    const filename = `attendance_log_${today}.pdf`;
-
     // ユーザーに処理中であることを知らせる
     const originalButton = document.getElementById('csv-export-btn');
     const originalButtonText = originalButton.innerHTML;
@@ -352,46 +371,53 @@ async function exportToPdf() {
     originalButton.disabled = true;
 
     try {
-        // 1. テーブル要素全体を画像としてキャプチャ
-        const canvas = await html2canvas(tableElement, { scale: 2 }); // スケール2で高解像度に
-        const imgData = canvas.toDataURL('image/jpeg', 0.9); // JPEG形式のBase64エンコード画像データ
-
-        // 2. jsPDFを初期化
-        const { jsPDF } = window.jspdf;
-        // A4サイズ、縦向きでドキュメントを作成
-        const doc = new jsPDF('p', 'mm', 'a4'); 
-
-        // 3. 画像サイズと位置を計算
-        const imgWidth = 190; // A4幅に収まるよう調整 (210mm - 20mm余白)
-        const pageHeight = doc.internal.pageSize.getHeight();
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-        let heightLeft = imgHeight;
-        let position = 10; // 上部の余白
-
-        // 4. PDFに画像を追加
-        doc.addImage(imgData, 'JPEG', 10, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-
-        // 5. 画像が複数ページにわたる場合、新しいページを追加して残りの画像を描画
-        while (heightLeft >= -10) { // わずかな余白を残してチェック
-            position = heightLeft - imgHeight + 10;
-            doc.addPage();
-            doc.addImage(imgData, 'JPEG', 10, position, imgWidth, imgHeight);
-            heightLeft -= pageHeight;
+        // バックエンドAPIの呼び出し
+        const url = `/api/summaries/export/pdf?employeeId=${employeeId}&yearMonth=${yearMonthStr}`;
+        const response = await fetch(url, {
+            method: 'GET',
+        });
+        
+        // エラー処理
+        if (!response.ok) {
+            // エラー応答がテキスト（日本語メッセージ）の場合を考慮
+            const errorText = await response.text();
+            throw new Error(`PDF生成APIエラー (${response.status}): ${errorText.substring(0, 100)}...`);
         }
 
-        // 6. ファイルをダウンロード
-        doc.save(filename);
+        // レスポンスがバイナリデータ（PDF）であると想定
+        const blob = await response.blob(); 
         
-        alert("✅ PDFファイルの生成とダウンロードを開始しました。");
+        // ファイル名をレスポンスヘッダーから取得（Content-Disposition）
+        const disposition = response.headers.get('Content-Disposition');
+        let filename = `${employeeName}_${yearMonthStr}_勤務表.pdf`; // デフォルトのファイル名
+        
+        if (disposition && disposition.indexOf('attachment') !== -1) {
+            // ヘッダーからファイル名を取得するロジック（URLエンコードされている場合に対応）
+            const filenameMatch = disposition.match(/filename\*=UTF-8''(.+)/i);
+            if (filenameMatch && filenameMatch[1]) {
+                 // エンコードされたファイル名をデコード
+                filename = decodeURIComponent(filenameMatch[1]);
+            }
+        }
+
+        // ダウンロード処理
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(downloadUrl);
+
+        alert(`✅ PDFファイル (${filename}) のダウンロードを開始しました。`);
 
     } catch (error) {
         console.error("PDF生成エラー:", error);
-        alert("❌ PDF生成中にエラーが発生しました。\n詳細をコンソールで確認してください。");
+        alert(`❌ PDF生成中にエラーが発生しました。\n${error.message}`);
     } finally {
         // ボタンを元に戻す
         originalButton.innerHTML = originalButtonText;
         originalButton.disabled = false;
     }
 }
-// --- PDF生成関数 終わり ---
