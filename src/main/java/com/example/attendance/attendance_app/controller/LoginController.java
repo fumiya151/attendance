@@ -20,7 +20,13 @@ public class LoginController {
     private static final String ROLE_DENIED_STATUS = "ROLE_DENIED";
 
     /**
-     * ログインAPIのエンドポイントです.
+     * ログインAPIのエンドポイントです。
+     *
+     * 【機能】
+     * ユーザー名、パスワード、ロール情報を使用して認証を行い、認証成功時にJWTトークンを生成し返却します。
+     *
+     * 【注意事項】
+     * 認証成功時は200 OKとトークン/IDを、ロール拒否時は403 Forbidden、認証失敗時は401 Unauthorizedを返却します。
      *
      * @param loginRequest ログインリクエスト
      * @return 成功時はJWTトークンと従業員ID、失敗時はエラーメッセージ

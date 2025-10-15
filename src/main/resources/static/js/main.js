@@ -46,13 +46,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ボタンの状態を更新する
     async function updateButtonStates(employeeId) {
-        // まずすべてのボタンを一旦有効化
-        Object.values(buttons).forEach(btn => btn.disabled = false);
+        // まずすべてのボタンを非活性化
+        Object.values(buttons).forEach(btn => btn.disabled = true);
 
         if (!employeeId) {
-            // 従業員が選択されていない場合はすべて非活性
-            Object.values(buttons).forEach(btn => btn.disabled = true);
-            return;
+            return; // 従業員が選択されていなければ非活性のまま
         }
 
         try {
@@ -61,21 +59,15 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (response.ok) {
                 const availableTypes = await response.json();
-                
-                // すべて一旦無効化
-                Object.values(buttons).forEach(btn => btn.disabled = true);
-                
                 // 有効な打刻種別のみ有効化
                 availableTypes.forEach(type => {
-                    if (buttons[type]) buttons[type].disabled = false;
+                    if (buttons[type]) {
+                        buttons[type].disabled = false;
+                    }
                 });
-            } else {
-                // エラー時はすべて無効化
-                Object.values(buttons).forEach(btn => btn.disabled = true);
             }
         } catch (error) {
             console.error('Error fetching next available stamp types:', error);
-            Object.values(buttons).forEach(btn => btn.disabled = true);
         }
     }
 
@@ -111,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const attendanceData = {
             employeeId: selectedUserCode,
             name: selectedUserName, // Controllerのメッセージ作成用に残す
-            attendanceType: type
+            stampType: type
         };
 
         try {

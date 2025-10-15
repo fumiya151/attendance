@@ -23,6 +23,18 @@ public class DailyAttendanceSummaryController {
 
         private static final String OPERATOR_HEADER = "X-Operator-Id";
 
+        /**
+         * 指定された年月の月次勤怠集計データを取得するAPIエンドポイントです。
+         *
+         * 【機能】
+         * 指定された年月（YYYY-MM）に基づき、その月の全従業員の集計情報（総労働時間、平均残業時間など）を返却します。
+         *
+         * 【注意事項】
+         * yearMonthの形式が不正な場合、HTTPステータス 400 Bad Request とエラーメッセージを返します。
+         *
+         * @param yearMonth 対象年月 (YYYY-MM形式)
+         * @return 月次集計情報を含む MonthlySummaryDto
+         */
         @GetMapping("/monthly")
         public ResponseEntity<?> getMonthlySummary(@RequestParam String yearMonth) {
                 try {
@@ -37,6 +49,12 @@ public class DailyAttendanceSummaryController {
         /**
          * 全期間の勤怠サマリーを従業員名情報付きで取得するAPIです。
          *
+         * 【機能】
+         * データベースに存在する全ての勤怠サマリーレコードを取得し、関連する従業員名を結合したDTOリストを返却します。
+         *
+         * 【注意事項】
+         * 大量のデータが存在する場合、パフォーマンスに影響を与える可能性があります。
+         *
          * @return DailyAttendanceSummaryDtoのリスト
          */
         @GetMapping
@@ -47,6 +65,12 @@ public class DailyAttendanceSummaryController {
 
         /**
          * 最新の勤怠サマリー10件を新しい順に取得するAPIエンドポイントです。
+         *
+         * 【機能】
+         * データベースから最新の**10件**の勤怠サマリーレコードを取得し、リストとして返却します。
+         *
+         * 【注意事項】
+         * 主にダッシュボードなどの概要表示のために使用されます。
          *
          * @return 最新10件の DailyAttendanceSummaryDto リスト
          */
@@ -60,11 +84,16 @@ public class DailyAttendanceSummaryController {
         /**
          * POST /api/summaries/approve/list
          * 勤怠サマリーIDと期間を受け取り、一括承認を実行します。（検索結果と期間による二重チェックに対応）
-         * 単体承認の場合も、ID 1件と期間を送信することでこのエンドポイントが処理します。
          *
-         * @param operatorId    HTTPヘッダー（X-Operator-Idを取得）
+         * 【機能】
+         * リクエストで指定されたIDリストの勤怠サマリーに対し、承認者のIDと指定された期間を検証しつつ、承認状態を更新します。
+         *
+         * 【注意事項】
+         * 単体承認の場合も、ID 1件と期間を送信することでこのエンドポイントが処理します。検証エラーや業務ロジックエラーは400を返します。
+         *
+         * @param operatorId  HTTPヘッダー（X-Operator-Idを取得）
          * @param requestBody JSONボディ（summaryIds, startDate, endDate）
-         * @return 承認されたレコード数を含む応答
+         * @return 承認されたレコード数を含む応答 (JSON形式: message, approvedCount)
          */
         @PostMapping("/approve/list")
         @SuppressWarnings("unchecked")

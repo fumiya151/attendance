@@ -282,8 +282,8 @@ function applyFiltersAndRenderTable(summaries) {
             <td>${sum.workDate}</td>
             <td>${sum.employeeName}</td>
             <td>${formatTime(sum.actualInTime)}</td> 
-            <td>${formatTime(sum.actualOutTime)}</td>
             <td>${sum.totalBreakMinutes ? (sum.totalBreakMinutes + '分') : '---'}</td> 
+            <td>${formatTime(sum.actualOutTime)}</td>
             <td>${sum.totalWorkMinutes ? (sum.totalWorkMinutes + '分') : '---'}</td> 
             <td><span class="${approvalClass}">${approvalText}</span></td> 
             <td>${actions}</td>

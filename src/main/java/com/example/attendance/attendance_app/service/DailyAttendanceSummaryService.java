@@ -10,9 +10,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-// iText関連のimportは不要になったため削除
-
-import java.io.IOException;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
@@ -28,22 +25,22 @@ public class DailyAttendanceSummaryService {
 
     private final DailyAttendanceSummaryRepository summaryRepository;
     private final EmployeeRepository employeeRepository;
-    // ★ 追加: PDF生成サービスをインジェクション ★
-    private final AttendancePdfService pdfService;
+    // PDF生成の責務は AttendancePdfService が持つため、ここでのインジェクションは削除します。
+    // private final AttendancePdfService pdfService; // 削除
 
     private static final String STATUS_APPROVED = "APPROVED";
     private static final String STATUS_PENDING = "PENDING";
     private static final ZoneId JST_ZONE = ZoneId.of("Asia/Tokyo");
 
     /**
-     * 指定された月度の全従業員の勤怠サマリーを集計するメソッドです.
+     * 指定された月度の全従業員の勤怠サマリーを集計するメソッドです。
      *
      * 【機能】
      * 指定された月内の全従業員の総労働時間と平均残業時間を計算します。
      * 標準労働時間は8時間/日として計算します。
      *
      * 【注意事項】
-     * 計算はサマリーテーブルのデータに基づいて行われます。
+     * 計算はサマリーテーブルのデータに基づいて行われます。平均残業時間は、その月に勤怠データが存在した従業員の数で割って算出されます。
      *
      * @param yearMonth 集計対象の年月 (YearMonthオブジェクト)
      * @return 月間集計結果のDTO (MonthlySummaryDto)
@@ -76,6 +73,11 @@ public class DailyAttendanceSummaryService {
 
     /**
      * 全期間の勤怠サマリーを従業員名情報と承認ステータス付きで取得します。
+     *
+     * 【機能】
+     * 全ての勤怠サマリーレコードを取得し、従業員名と結合したDTOリストを返却します。
+     *
+     * 【注意事項】
      * リストは workDate の降順（新しい日付が先）でソートされます。
      *
      * @return DailyAttendanceSummaryDtoのリスト
@@ -99,10 +101,13 @@ public class DailyAttendanceSummaryService {
      * 指定された従業員と月度の勤怠サマリーを取得します。
      *
      * 【機能】
-     * Controllerからのリクエストに基づき、単一従業員の月次データを取得します。
+     * 指定された従業員IDと年月に基づいて、その月の勤怠サマリーデータを取得します。
+     *
+     * 【注意事項】
+     * 取得されたリストは、勤務表形式に合わせるため、workDate の昇順（古い日付が先）でソートされます。
      *
      * @param employeeId 従業員ID
-     * @param yearMonth   対象年月
+     * @param yearMonth  対象年月
      * @return DailyAttendanceSummaryDtoのリスト（日付昇順でソート済み）
      */
     public List<DailyAttendanceSummaryDto> findSummariesByEmployeeAndMonth(String employeeId, YearMonth yearMonth) {
@@ -126,33 +131,17 @@ public class DailyAttendanceSummaryService {
     }
 
     /**
-     * 勤怠サマリーリストから月次勤務表形式のPDFファイルを生成します。
+     * 指定された勤怠サマリーを「承認済み」に更新するメソッドです。
      *
      * 【機能】
-     * 渡された DailyAttendanceSummaryDto のリストに基づき、
-     * 月次出勤簿フォーマットのPDF（タイトルと月次テーブル）を生成し、バイト配列で返却します。
+     * IDリストに基づいてサマリーを取得し、期間チェック（単体承認時はスキップ）とステータスチェック（PENDINGのみ）を行った上で、APPROVEDに更新します。
      *
-     * 【前提】
-     * 渡されるリストは、単一の従業員、単一の月度のデータであること。
-     *
-     * @param summaries PDFに出力する勤怠サマリーDTOのリスト
-     * @return 生成されたPDFのバイト配列
-     *
-     * @throws IOException PDFサービスからのエラー
-     */
-    public byte[] generateAttendancePdf(List<DailyAttendanceSummaryDto> summaries) throws IOException {
-        // ★ 処理を AttendancePdfService に委譲 ★
-        return pdfService.generateAttendancePdf(summaries);
-    }
-
-    // 以前存在した formatTime(String timeString) メソッドは未使用のため削除
-
-    /**
-     * 指定された勤怠サマリーを「承認済み」に更新するメソッドです.
+     * 【注意事項】
+     * このメソッドはトランザクション内で実行されます。承認操作を行うapproverIdが存在しない場合はRuntimeExceptionがスローされます。
      *
      * @param summaryIds 承認対象のDailyAttendanceSummaryのIDリスト
-     * @param startDate     チェック対象期間開始日（単体承認時は無視される）
-     * @param endDate             チェック対象期間終了日（単体承認時は無視される）
+     * @param startDate  チェック対象期間開始日（単体承認時は無視される）
+     * @param endDate    チェック対象期間終了日（単体承認時は無視される）
      * @param approverId 承認操作を行った管理者ID
      * @return 承認されたレコード数
      */
@@ -206,6 +195,12 @@ public class DailyAttendanceSummaryService {
     /**
      * 最新の日次勤怠サマリー10件を、新しい順（ID降順）で取得し、氏名を付与してDTOに変換します。
      *
+     * 【機能】
+     * リポジトリから最新の10件の勤怠サマリーエンティティを取得し、全従業員情報と結合してDTOリストとして返却します。
+     *
+     * 【注意事項】
+     * 従業員名結合のため、全従業員を取得してからマッピングを行います。リストはID降順（最新順）です。
+     *
      * @return 最新10件の DailyAttendanceSummaryDto リスト
      */
     public List<DailyAttendanceSummaryDto> findLatest10DailySummaries() {
@@ -225,6 +220,16 @@ public class DailyAttendanceSummaryService {
 
     /**
      * DailyAttendanceSummaryエンティティをDailyAttendanceSummaryDtoに変換するヘルパーメソッド。
+     *
+     * 【機能】
+     * 勤怠サマリーエンティティの内容をDTOにコピーし、別途取得したマップから従業員名を付与します。
+     *
+     * 【注意事項】
+     * 従業員名マップに該当IDがない場合、「不明な従業員」というデフォルト値が設定されます。
+     *
+     * @param summary         変換元の勤怠サマリーエンティティ
+     * @param employeeNameMap 従業員IDと氏名をマッピングしたマップ
+     * @return 従業員名が付与された DailyAttendanceSummaryDto
      */
     private DailyAttendanceSummaryDto convertToDailySummaryDto(
             DailyAttendanceSummary summary, Map<String, String> employeeNameMap) {

@@ -30,6 +30,15 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * 勤怠サマリーリストから月次勤務表形式のPDFファイルを生成するサービスです。
+ *
+ * 【機能】
+ * iTextライブラリを使用して、渡された勤怠サマリーデータに基づいたPDF文書を作成します。
+ *
+ * 【注意事項】
+ * PDF内に日本語を出力するため、プロジェクトのリソースディレクトリに日本語フォントファイル（ipaexg.ttfなど）が必要です。
+ */
 @Service
 @RequiredArgsConstructor
 public class AttendancePdfService {
@@ -41,7 +50,7 @@ public class AttendancePdfService {
      * 渡された DailyAttendanceSummaryDto のリストに基づき、
      * 月次出勤簿フォーマットのPDF（タイトルと月次テーブル）を生成し、バイト配列で返却します。
      *
-     * 【前提】
+     * 【注意事項】
      * 渡されるリストは、単一の従業員、単一の月度のデータであること。
      *
      * @param summaries PDFに出力する勤怠サマリーDTOのリスト
@@ -168,6 +177,15 @@ public class AttendancePdfService {
 
     /**
      * LocalTimeをHH:mm形式に整形するヘルパーメソッド。
+     *
+     * 【機能】
+     * LocalTimeオブジェクトを「時:分」（HH:mm）の文字列形式に変換します。
+     *
+     * 【注意事項】
+     * timeがnullの場合、ハイフン3つ（---）を返します。
+     *
+     * @param time 整形対象の時刻
+     * @return HH:mm形式の文字列、または"---"
      */
     private String formatTime(LocalTime time) {
         if (time == null) {
@@ -178,6 +196,12 @@ public class AttendancePdfService {
 
     /**
      * 分単位の時間を「X.Y時間」の形式（小数第1位まで）に整形するヘルパーメソッド。
+     *
+     * 【機能】
+     * 分単位の時間を小数付きの時間に変換し、小数点以下第一位までの形式（例: "140.5"）の文字列として返します。
+     *
+     * 【注意事項】
+     * 0分以下の場合は "0.0" を返します。変換には四捨五入が適用されます。
      *
      * @param minutes 分単位の時間
      * @return 整形された文字列（例: "140.5"）
