@@ -271,7 +271,7 @@ async function exportToPdf(employeeId, yearMonthStr, employeeName) {
 
     try {
         // バックエンドAPIの呼び出し（/api/summaries/export/pdf を想定）
-        const url = `/api/summaries/export/pdf?employeeId=${employeeId}&yearMonth=${yearMonthStr}`;
+        const url = `/api/exports/pdf/summaries?employeeId=${employeeId}&yearMonth=${yearMonthStr}`;
         // 認証ヘッダーを付与
         const response = await fetch(url, {
             method: 'GET',
