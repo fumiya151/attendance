@@ -1,6 +1,4 @@
 // admin_login.js (最終修正版: 動作保証のための分岐を復元)
-
-const roleInput = document.getElementById('login-role'); 
 const loginForm = document.getElementById('login-form');
 const usernameInput = document.getElementById('username');
 const passwordInput = document.getElementById('password');
@@ -38,10 +36,9 @@ loginForm.addEventListener('submit', async (e) => {
             sessionStorage.setItem('loggedInUserRole', actualRole); 
             sessionStorage.setItem('token', token);
 
-            // ★修正点: ログイン直後のリクエストにトークンが付与されないため、ロールに基づき画面遷移を分岐
+            // ロールに基づき画面遷移を分岐
             const targetRole = (actualRole || 'EMP').toUpperCase();
             
-            // ★修正点: パスから '/html' を削除し、ルート相対パスに修正
             if (targetRole === 'ADMIN' || targetRole === 'MGR') {
                 window.location.href = '/html/admin_main.html'; // 管理者画面へ
             } else if (targetRole === 'EMP') {
@@ -53,6 +50,10 @@ loginForm.addEventListener('submit', async (e) => {
             
         } else {
             // ステータスコードが200以外の場合の処理
+            sessionStorage.removeItem('loggedInEmployeeId');
+            sessionStorage.removeItem('loggedInUserRole'); 
+            sessionStorage.removeItem('token');
+            
             let errorText = await response.text();
             let errorData = null;
             try {

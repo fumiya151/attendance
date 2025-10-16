@@ -3,6 +3,7 @@ package com.example.attendance.attendance_app.repository;
 import org.springframework.data.jpa.repository.JpaRepository;
 import com.example.attendance.attendance_app.model.Employee;
 import org.springframework.stereotype.Repository;
+import java.util.Optional;
 import java.util.List;
 
 @Repository
@@ -23,4 +24,16 @@ public interface EmployeeRepository extends JpaRepository<Employee, String> {
      * @return 条件に一致する Employeeエンティティのリスト
      */
     List<Employee> findByNameContainingIgnoreCaseOrEmployeeIdContainingIgnoreCase(String name, String code);
+
+    /**
+     * 指定された従業員IDに一致する従業員情報を検索します。
+     *
+     * 【機能】
+     * employeeId フィールドを使用して、データベースから該当する Employee レコードを検索します。
+     * 該当するレコードがない場合は、空の Optional を返します。
+     *
+     * @param employeeId 検索対象の従業員ID
+     * @return 該当する Employee エンティティを格納した Optional
+     */
+    Optional<Employee> findByEmployeeId(String employeeId);
 }

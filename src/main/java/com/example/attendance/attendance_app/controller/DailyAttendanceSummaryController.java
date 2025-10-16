@@ -23,7 +23,6 @@ public class DailyAttendanceSummaryController {
 
         private static final String OPERATOR_HEADER = "X-Operator-Id";
 
-        // --- 新規追加: 単体サマリー取得API (GET /api/summaries/{id}) ---
         /**
          * 指定されたIDの勤怠サマリーレコードを単体で取得するAPIエンドポイントです。
          *
@@ -104,6 +103,23 @@ public class DailyAttendanceSummaryController {
         public List<DailyAttendanceSummaryDto> getAllSummariesForDisplay() {
                 // Service層でEmployee情報と結合されたDTOを取得する
                 return summaryService.getAllSummariesWithEmployeeInfo();
+        }
+
+        /**
+         * 勤怠サマリーを従業員IDで従業員名情報付きで取得するAPIです。
+         *
+         * 【機能】
+         * データベースに存在する全ての勤怠サマリーレコードを取得し、関連する従業員名を結合したDTOリストを返却します。
+         *
+         * 【注意事項】
+         * 大量のデータが存在する場合、パフォーマンスに影響を与える可能性があります。
+         *
+         * @return DailyAttendanceSummaryDtoのリスト
+         */
+        @GetMapping("/emplimitsummaries")
+        public List<DailyAttendanceSummaryDto> getLimitSummariesForDisplay(String employeeId) {
+                // Service層でEmployee情報と結合されたDTOを取得する
+                return summaryService.getLimitSummariesWithEmployeeInfo(employeeId);
         }
 
         /**

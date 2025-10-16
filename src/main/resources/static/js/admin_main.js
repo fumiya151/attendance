@@ -1,10 +1,6 @@
 // ログイン中の従業員IDをセッションストレージから取得する関数 (共通JSファイルに存在することを前提)
 function getLoggedInEmployeeId() {
-    const employeeId = sessionStorage.getItem('loggedInEmployeeId'); 
-    if (!employeeId) {
-        throw new Error("操作を行う従業員IDが見つかりません。ログインが必要です。");
-    }
-    return employeeId;
+    return sessionStorage.getItem('loggedInEmployeeId'); 
 }
 
 /**
@@ -25,7 +21,7 @@ let currentDisplayedSummaries = [];
 // --- JWTトークンとオペレーターIDを取得するヘルパー関数 (修正箇所) ---
 function getAuthHeaders() {
     const token = sessionStorage.getItem('token');
-    const employeeId = sessionStorage.getItem('loggedInEmployeeId'); // ★追加: 従業員IDを取得
+    const employeeId = getLoggedInEmployeeId(); 
     
     if (!token || !employeeId) {
         // トークンまたはIDがない場合、再ログインを促す
@@ -37,7 +33,7 @@ function getAuthHeaders() {
     // Authorization ヘッダーと X-Operator-Id ヘッダーの両方を含める
     return {
         'Authorization': `Bearer ${token}`,
-        'X-Operator-Id': employeeId // ★修正点: オペレーターIDヘッダーを追加
+        'X-Operator-Id': employeeId 
     };
 }
 
@@ -52,23 +48,27 @@ async function fetchAndRenderEmployees() {
     if (!headers['Authorization']) return;
 
     try {
-        // headersにAuthorizationとX-Operator-Idが含まれるようになりました
         const res = await fetch('/api/employees/limited', { headers }); 
         
         if (!res.ok) {
-            const errorText = await res.text();
+            let errorMessage = `従業員一覧の取得に失敗しました (ステータス: ${res.status})`;
             if (res.status === 403) {
-                alert('アクセス権限がありません (ADMIN/MGRロールが必要です)。');
-                throw new Error('Forbidden: Access Denied');
+                // 権限エラーの場合
+                errorMessage = 'アクセス権限がありません (ADMIN/MGRロールが必要です)。';
+            } else {
+                // その他のエラーの場合、詳細なエラーメッセージを取得
+                const errorText = await res.text();
+                errorMessage = `取得失敗: ${errorText}`;
             }
-            throw new Error(`取得失敗: ${errorText}`);
+            
+            alert(errorMessage);
+            throw new Error(errorMessage);
         }
+        
         const employees = await res.json();
         renderEmployeeRows(employees);
     } catch (err) {
-        if (err.message !== 'Forbidden: Access Denied') {
-            alert(`従業員一覧の取得に失敗しました: ${err.message}`);
-        }
+        // alertはif (!res.ok)ブロック内ですでに行われている
         console.error(err);
     }
 }
@@ -78,10 +78,9 @@ function renderEmployeeRows(list) {
     const tbody = document.querySelector('#employees .data-table tbody');
     const insertPoint = document.getElementById('employee-insert-point');
     
-    // 既存行削除
-    while (insertPoint.previousElementSibling && insertPoint.previousElementSibling.tagName === 'TR') {
-        tbody.removeChild(insertPoint.previousElementSibling);
-    }
+    tbody.querySelectorAll('.employee-row-data').forEach(row => {
+        tbody.removeChild(row);
+    });
     
     list.forEach(emp => {
         const tr = document.createElement('tr');
@@ -112,11 +111,11 @@ function renderEmployeeRows(list) {
             
             if (confirm(`従業員コード: ${employeeId} の従業員を本当に削除しますか？`)) {
                 try {
-                    const operatorId = getLoggedInEmployeeId();
+                    // getAuthHeaders()内で認証チェックが行われるため、operatorIdの取得は不要
                     
                     const res = await fetch(`/api/employees/${employeeId}`, {
                         method: 'DELETE', 
-                        headers: getAuthHeaders() // getAuthHeaders()にX-Operator-Idが含まれるようになりました
+                        headers: getAuthHeaders()
                     });
                     
                     if (res.ok) {
@@ -131,7 +130,12 @@ function renderEmployeeRows(list) {
                 }
             }
         });
-        tbody.insertBefore(tr, insertPoint);
+
+        if (insertPoint) {
+            tbody.insertBefore(tr, insertPoint);
+        } else {
+            tbody.appendChild(tr);
+        }
     });
 }
 
@@ -149,11 +153,18 @@ async function fetchMonthlySummary() {
         const month = String(today.getMonth() + 1).padStart(2, '0');
         const yearMonth = `${year}-${month}`;
 
-        const res = await fetch(`/api/summaries/monthly?yearMonth=${yearMonth}`, { headers }); // headersにX-Operator-Idが含まれるようになりました
+        const res = await fetch(`/api/summaries/monthly?yearMonth=${yearMonth}`, { headers });
         
         if (!res.ok) {
-             if (res.status === 403) throw new Error('アクセス権限がありません。');
-             throw new Error('月次サマリーの取得に失敗しました');
+            let errorMessage;
+            if (res.status === 403) {
+                errorMessage = 'アクセス権限がありません。';
+            } else {
+                errorMessage = '月次サマリーの取得に失敗しました';
+            }
+            // 権限エラーの場合のみアラートを表示
+            if (res.status === 403) alert(errorMessage); 
+            throw new Error(errorMessage);
         }
         
         const summary = await res.json();
@@ -165,7 +176,6 @@ async function fetchMonthlySummary() {
         console.error(err);
         totalWorkHoursEl.textContent = '- 時間';
         averageOvertimeEl.textContent = '- 時間';
-        if (err.message.includes('権限')) alert(err.message);
     }
 }
 
@@ -205,13 +215,19 @@ async function fetchAndRenderAttendanceSummary() {
 
     try {
         console.log(`API呼び出し(給与): /api/attendance/summary?startDate=${formattedStartDate}&endDate=${formattedEndDate}`);
-        const res = await fetch(`/api/attendance/summary?startDate=${formattedStartDate}&endDate=${formattedEndDate}`, { headers }); // headersにX-Operator-Idが含まれるようになりました
+        const res = await fetch(`/api/attendance/summary?startDate=${formattedStartDate}&endDate=${formattedEndDate}`, { headers });
         
         if (!res.ok) {
-             if (res.status === 403) throw new Error('アクセス権限がありません。');
-            const errorText = await res.text();
-            console.error('APIエラーレスポンス:', errorText);
-            throw new Error(`勤怠概要データの取得に失敗しました (ステータス: ${res.status})`);
+            let errorMessage;
+            if (res.status === 403) {
+                errorMessage = 'アクセス権限がありません。';
+            } else {
+                const errorText = await res.text();
+                console.error('APIエラーレスポンス:', errorText);
+                errorMessage = `勤怠概要データの取得に失敗しました (ステータス: ${res.status})`;
+            }
+            if (res.status === 403) alert(errorMessage);
+            throw new Error(errorMessage);
         }
         
         const summaries = await res.json();
@@ -220,7 +236,6 @@ async function fetchAndRenderAttendanceSummary() {
         console.error('集計データの取得または描画中にエラーが発生しました:', err);
         const tbody = document.getElementById('payroll-results-body');
         tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: red;">データの取得に失敗しました。コンソールを確認してください。</td></tr>';
-        if (err.message.includes('権限')) alert(err.message);
     }
 }
 
@@ -264,14 +279,19 @@ async function fetchAndDisplaySummaries() {
     if (!headers['Authorization']) return;
 
     try {
-        // headersにX-Operator-Idが含まれるようになりました
         const response = await fetch('/api/summaries/limitsummaries', { headers }); 
         
         if (!response.ok) {
-             if (response.status === 403) throw new Error('アクセス権限がありません。');
-             const errorText = await response.text();
-             console.error('APIエラーレスポンス(勤怠ログ):', errorText);
-             throw new Error(`勤怠サマリーの取得に失敗しました (ステータス: ${response.status})。`);
+            let errorMessage;
+            if (response.status === 403) {
+                errorMessage = 'アクセス権限がありません。';
+                alert(errorMessage);
+            } else {
+                const errorText = await response.text();
+                console.error('APIエラーレスポンス(勤怠ログ):', errorText);
+                errorMessage = `勤怠サマリーの取得に失敗しました (ステータス: ${response.status})。`;
+            }
+            throw new Error(errorMessage);
         }
         
         const summaries = await response.json(); 
@@ -290,9 +310,8 @@ async function fetchAndDisplaySummaries() {
         const tableBody = document.querySelector('#attendance-logs .data-table tbody');
         const COL_SPAN = 9; 
         if (tableBody) {
-             tableBody.innerHTML = `<tr><td colspan="${COL_SPAN}" style="color: red; text-align: center;">エラー: ${error.message}</td></tr>`;
+            tableBody.innerHTML = `<tr><td colspan="${COL_SPAN}" style="color: red; text-align: center;">エラー: ${error.message}</td></tr>`;
         }
-        if (error.message.includes('権限')) alert(error.message);
     }
 }
 
@@ -460,31 +479,35 @@ function applyFiltersAndRenderTable(summaries) {
         button.addEventListener('click', async (event) => {
             const summaryId = event.currentTarget.dataset.id;
             
-            // 期間入力フィールドから現在の日付を取得 (HTMLにIDがないため、仮で定義)
-            let startDate = document.getElementById('approval-start-date')?.value || new Date().toISOString().substring(0, 10);
-            let endDate = document.getElementById('approval-end-date')?.value || new Date().toISOString().substring(0, 10);
+            const targetSummary = currentDisplayedSummaries.find(s => String(s.id) === summaryId);
+            const workDate = targetSummary ? targetSummary.workDate : null;
 
             if (!summaryId) {
                 alert('承認対象のデータIDが見つかりません。');
                 return;
             }
+            if (!workDate) {
+                alert('承認対象の勤務日が見つかりません。');
+                return;
+            }
 
-            if (!confirm(`ID: ${summaryId} の勤怠データを承認済みにしますか？`)) {
+            if (!confirm(`ID: ${summaryId} (${workDate}) の勤怠データを承認済みにしますか？`)) {
                 return;
             }
 
             try {
-                const approverId = getLoggedInEmployeeId();
+                // 認証情報はgetAuthHeadersに含まれる
                 const res = await fetch(`/api/summaries/approve/list`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        ...getAuthHeaders() // getAuthHeaders()にX-Operator-Idが含まれるようになりました
+                        ...getAuthHeaders()
                     },
                     body: JSON.stringify({ 
                         summaryIds: [parseInt(summaryId, 10)], 
-                        startDate: startDate, 
-                        endDate: endDate 
+                        // workDateを期間として使用
+                        startDate: workDate, 
+                        endDate: workDate 
                     }) 
                 });
 
@@ -497,12 +520,9 @@ function applyFiltersAndRenderTable(summaries) {
                     throw new Error(data.message || '単体承認処理中に不明なエラーが発生しました。');
                 }
             } catch (error) {
-                if (error.message.includes("操作を行う従業員IDが見つかりません")) {
-                    alert('❌ 承認失敗: ログインセッションが無効です。ログアウトして再度ログインしてください。');
-                } else {
-                    alert(`❌ 単体承認に失敗しました: ${error.message}`);
-                    console.error("Single approval error:", error);
-                }
+                // getAuthHeadersがリダイレクトするため、エラーはAPI通信後のエラーに絞られる
+                alert(`❌ 単体承認に失敗しました: ${error.message}`);
+                console.error("Single approval error:", error);
             }
         });
     });
@@ -513,13 +533,22 @@ document.addEventListener('DOMContentLoaded', function () {
     
     // --- ロールに基づく画面表示制御の実行 ---
     const userRole = getLoggedInUserRole();
-    const employeeId = getLoggedInEmployeeId(); 
-    
-    // 1. 権限がないユーザーのチェック（ログインセッションの確認）
-    if (!employeeId || userRole === 'UNKNOWN') {
+    try {
+        // getLoggedInEmployeeId()がエラーをthrowしなくなったため、try...catchは不要。
+        // getAuthHeaders()内でチェックとリダイレクトが行われる。
+        const employeeId = getLoggedInEmployeeId(); 
+
+        // 1. 権限がないユーザーのチェック（ログインセッションの確認）
+        if (!employeeId || userRole === 'UNKNOWN') {
+            alert('セッション情報が無効です。再度ログインしてください。');
+            window.location.href = 'admin_login.html';
+            return; 
+        }
+    } catch (e) {
+        // 念のため、エラーが発生した場合の保険
         alert('セッション情報が無効です。再度ログインしてください。');
         window.location.href = 'admin_login.html';
-        return; 
+        return;
     }
     
     // 2. EMP ロール時の処理（リダイレクトを推奨）

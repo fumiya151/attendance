@@ -6,6 +6,7 @@ function getLoggedInEmployeeId() {
     if (!employeeId) {
         // セッション切れの場合はログイン画面へリダイレクト（セキュリティ担保）
         window.location.href = '/html/punch_login.html'; 
+        // エラーをスローして後続の処理を停止
         throw new Error("操作を行う従業員IDが見つかりません。ログインが必要です。");
     }
     return employeeId;
@@ -23,7 +24,8 @@ function getLoggedInUserRole() {
 // --- JWTトークン取得ヘルパー ---
 function getAuthHeaders() {
     const token = sessionStorage.getItem('token');
-    const employeeId = sessionStorage.getElementById('loggedInEmployeeId'); // IDも取得
+    // ★修正点: getElementByIdはHTML要素の取得メソッド。sessionStorageからの取得は getItem を使う。
+    const employeeId = sessionStorage.getItem('loggedInEmployeeId'); 
 
     if (!token || !employeeId) {
         // トークンがない場合、再ログインを促す
@@ -33,7 +35,7 @@ function getAuthHeaders() {
     }
     return {
         'Authorization': `Bearer ${token}`,
-        'X-Operator-Id': employeeId // ★追加: 監査・認可のためにIDも常に付与
+        'X-Operator-Id': employeeId // ★修正なし: 監査・認可のためにIDも常に付与
     };
 }
 
@@ -54,7 +56,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         
         // EMP専用画面のため、従業員名検索プルダウンを非表示/無効化
-        const employeeDropdownWrapper = document.getElementById('search-employee')?.closest('.action-bar').querySelector('label[for="search-employee"]');
+        const employeeDropdownWrapper = document.getElementById('search-employee')?.closest('.action-bar')?.querySelector('label[for="search-employee"]');
         const employeeDropdown = document.getElementById('search-employee');
         const searchButton = document.getElementById('search-button');
 
@@ -64,6 +66,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         
         // 初期データの取得 (ログイン中の従業員のみ)
+        // APIパスを /api/summaries/emplimitsummaries に合わせる
         fetchAndDisplaySummaries(employeeId);
         
         // イベントリスナーの設定
@@ -82,18 +85,17 @@ document.addEventListener('DOMContentLoaded', function () {
                     return;
                 }
                 
+                // employeeId を使って、ユーザー名を DOM から取得する代わりに取得することを推奨
                 const employeeName = userInfoSpan ? userInfoSpan.textContent.split(' ')[1].replace(/[()]/g, '') : employeeId;
 
-                // PDF出力処理 (ここではダミーのまま)
-                // TODO: exportToPdf 関数を実装し、ここで呼び出す
-                // exportToPdf(employeeId, selectedMonth, employeeName); 
-                alert(`PDF出力機能は現在開発中です。\n対象: ${employeeName} (${selectedMonth})`);
+                // ★修正点: ダミーの alert を削除し、exportToPdf 関数を呼び出す★
+                exportToPdf(employeeId, selectedMonth, employeeName); 
             });
         }
 
     } catch (e) {
         // getLoggedInEmployeeId内でリダイレクトされるため、ここでは何も処理しない
-        console.warn("セッション情報なし。ログイン画面へリダイレクトします。");
+        // console.warn("セッション情報なし。ログイン画面へリダイレクトします。");
     }
 });
 
@@ -107,9 +109,9 @@ async function fetchAndDisplaySummaries(employeeId) {
     if (!headers['Authorization']) return;
 
     try {
+        // ★修正点: APIパスを /api/summaries/emplimitsummaries に修正
         // EMPユーザーのIDをクエリパラメータとしてAPIに渡し、自身のデータのみを要求する
-        // ★修正点: headersを付与
-        const response = await fetch(`/api/summaries/limitsummaries?employeeId=${employeeId}`, { headers }); 
+        const response = await fetch(`/api/summaries/emplimitsummaries?employeeId=${employeeId}`, { headers }); 
         
         if (!response.ok) {
              if (response.status === 403) throw new Error('データアクセスが拒否されました。');
@@ -246,4 +248,77 @@ function applyFiltersAndRenderTable(summaries) {
             }
         });
     });
+}
+
+
+// --- PDF生成・ダウンロード関数 (API経由) ---
+/**
+ * 指定された従業員と月の勤務表PDFをバックエンドAPI経由で取得し、ダウンロードします。
+ * @param {string} employeeId 対象従業員ID
+ * @param {string} yearMonthStr 対象年月 (YYYY-MM)
+ * @param {string} employeeName ファイル名表示用の従業員名
+ */
+async function exportToPdf(employeeId, yearMonthStr, employeeName) {
+    
+    const headers = getAuthHeaders();
+    if (!headers['Authorization']) return; // トークンがない場合は処理を中断
+
+    // ユーザーに処理中であることを知らせる
+    const originalButton = document.getElementById('csv-export-btn');
+    const originalButtonText = originalButton.innerHTML;
+    originalButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> PDF生成中...';
+    originalButton.disabled = true;
+
+    try {
+        // バックエンドAPIの呼び出し（/api/summaries/export/pdf を想定）
+        const url = `/api/summaries/export/pdf?employeeId=${employeeId}&yearMonth=${yearMonthStr}`;
+        // 認証ヘッダーを付与
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: headers
+        });
+        
+        // エラー処理
+        if (!response.ok) {
+            // エラー応答がテキスト（日本語メッセージ）の場合を考慮
+            const errorText = await response.text();
+            throw new Error(`PDF生成APIエラー (${response.status}): ${errorText.substring(0, 100)}...`); 
+        }
+
+        // レスポンスがバイナリデータ（PDF）であると想定
+        const blob = await response.blob(); 
+        
+        // ファイル名をレスポンスヘッダーから取得（Content-Disposition）
+        const disposition = response.headers.get('Content-Disposition');
+        let filename = `${employeeName}_${yearMonthStr}_勤務表.pdf`; // デフォルトのファイル名
+        
+        if (disposition && disposition.indexOf('attachment') !== -1) {
+            // ヘッダーからファイル名を取得するロジック（URLエンコードされている場合に対応）
+            const filenameMatch = disposition.match(/filename\*=UTF-8''(.+)/i);
+            if (filenameMatch && filenameMatch[1]) {
+                // エンコードされたファイル名をデコード
+                filename = decodeURIComponent(filenameMatch[1]);
+            }
+        }
+
+        // ダウンロード処理
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(downloadUrl);
+
+        alert(`✅ PDFファイル (${filename}) のダウンロードを開始しました。`);
+
+    } catch (error) {
+        console.error("PDF生成エラー:", error);
+        alert(`❌ PDF生成中にエラーが発生しました。\n${error.message}`);
+    } finally {
+        // ボタンを元に戻す
+        originalButton.innerHTML = originalButtonText;
+        originalButton.disabled = false;
+    }
 }
