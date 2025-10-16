@@ -7,10 +7,39 @@ function getLoggedInEmployeeId() {
     return employeeId;
 }
 
+/**
+ * ログインユーザーのロールを取得する。
+ * @returns {string} ロールコード (例: 'ADMIN', 'MGR', 'EMP')
+ */
+function getLoggedInUserRole() {
+    // ログイン時に保存したロールコードを取得
+    const role = sessionStorage.getItem('loggedInUserRole'); 
+    return role ? role.toUpperCase() : 'UNKNOWN'; 
+}
+
 // 取得した全サマリーを保持するためのグローバル変数
 let allSummaries = []; 
 // 現在テーブルに表示されている（フィルタリング後の）サマリーを保持する変数
 let currentDisplayedSummaries = []; 
+
+// --- JWTトークンとオペレーターIDを取得するヘルパー関数 (修正箇所) ---
+function getAuthHeaders() {
+    const token = sessionStorage.getItem('token');
+    const employeeId = sessionStorage.getItem('loggedInEmployeeId'); // ★追加: 従業員IDを取得
+    
+    if (!token || !employeeId) {
+        // トークンまたはIDがない場合、再ログインを促す
+        alert("認証セッションが無効です。再度ログインしてください。");
+        window.location.href = 'admin_login.html';
+        return {};
+    }
+    
+    // Authorization ヘッダーと X-Operator-Id ヘッダーの両方を含める
+    return {
+        'Authorization': `Bearer ${token}`,
+        'X-Operator-Id': employeeId // ★修正点: オペレーターIDヘッダーを追加
+    };
+}
 
 
 // -------------------------------------------------------------
@@ -19,13 +48,28 @@ let currentDisplayedSummaries = [];
 
 // 従業員一覧取得＆テーブル描画
 async function fetchAndRenderEmployees() {
+    const headers = getAuthHeaders();
+    if (!headers['Authorization']) return;
+
     try {
-        const res = await fetch('/api/employees/limited');
-        if (!res.ok) throw new Error('取得失敗');
+        // headersにAuthorizationとX-Operator-Idが含まれるようになりました
+        const res = await fetch('/api/employees/limited', { headers }); 
+        
+        if (!res.ok) {
+            const errorText = await res.text();
+            if (res.status === 403) {
+                alert('アクセス権限がありません (ADMIN/MGRロールが必要です)。');
+                throw new Error('Forbidden: Access Denied');
+            }
+            throw new Error(`取得失敗: ${errorText}`);
+        }
         const employees = await res.json();
         renderEmployeeRows(employees);
     } catch (err) {
-        alert('従業員一覧の取得に失敗しました');
+        if (err.message !== 'Forbidden: Access Denied') {
+            alert(`従業員一覧の取得に失敗しました: ${err.message}`);
+        }
+        console.error(err);
     }
 }
 
@@ -72,9 +116,7 @@ function renderEmployeeRows(list) {
                     
                     const res = await fetch(`/api/employees/${employeeId}`, {
                         method: 'DELETE', 
-                        headers: {
-                            'X-Operator-Id': operatorId
-                        }
+                        headers: getAuthHeaders() // getAuthHeaders()にX-Operator-Idが含まれるようになりました
                     });
                     
                     if (res.ok) {
@@ -95,6 +137,9 @@ function renderEmployeeRows(list) {
 
 // 月次サマリー概要（トップカード用）
 async function fetchMonthlySummary() {
+    const headers = getAuthHeaders();
+    if (!headers['Authorization']) return;
+
     const totalWorkHoursEl = document.getElementById('total-work-hours');
     const averageOvertimeEl = document.getElementById('average-overtime');
 
@@ -104,8 +149,12 @@ async function fetchMonthlySummary() {
         const month = String(today.getMonth() + 1).padStart(2, '0');
         const yearMonth = `${year}-${month}`;
 
-        const res = await fetch(`/api/summaries/monthly?yearMonth=${yearMonth}`);
-        if (!res.ok) throw new Error('月次サマリーの取得に失敗しました');
+        const res = await fetch(`/api/summaries/monthly?yearMonth=${yearMonth}`, { headers }); // headersにX-Operator-Idが含まれるようになりました
+        
+        if (!res.ok) {
+             if (res.status === 403) throw new Error('アクセス権限がありません。');
+             throw new Error('月次サマリーの取得に失敗しました');
+        }
         
         const summary = await res.json();
 
@@ -116,6 +165,7 @@ async function fetchMonthlySummary() {
         console.error(err);
         totalWorkHoursEl.textContent = '- 時間';
         averageOvertimeEl.textContent = '- 時間';
+        if (err.message.includes('権限')) alert(err.message);
     }
 }
 
@@ -124,6 +174,9 @@ async function fetchMonthlySummary() {
 // -------------------------------------------------------------
 
 async function fetchAndRenderAttendanceSummary() {
+    const headers = getAuthHeaders();
+    if (!headers['Authorization']) return;
+
     const periodSelect = document.getElementById('aggregation-period-select');
     
     // プルダウンのオプションが生成されているか確認し、デフォルト期間を使用
@@ -152,9 +205,10 @@ async function fetchAndRenderAttendanceSummary() {
 
     try {
         console.log(`API呼び出し(給与): /api/attendance/summary?startDate=${formattedStartDate}&endDate=${formattedEndDate}`);
-        const res = await fetch(`/api/attendance/summary?startDate=${formattedStartDate}&endDate=${formattedEndDate}`);
+        const res = await fetch(`/api/attendance/summary?startDate=${formattedStartDate}&endDate=${formattedEndDate}`, { headers }); // headersにX-Operator-Idが含まれるようになりました
         
         if (!res.ok) {
+             if (res.status === 403) throw new Error('アクセス権限がありません。');
             const errorText = await res.text();
             console.error('APIエラーレスポンス:', errorText);
             throw new Error(`勤怠概要データの取得に失敗しました (ステータス: ${res.status})`);
@@ -166,6 +220,7 @@ async function fetchAndRenderAttendanceSummary() {
         console.error('集計データの取得または描画中にエラーが発生しました:', err);
         const tbody = document.getElementById('payroll-results-body');
         tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: red;">データの取得に失敗しました。コンソールを確認してください。</td></tr>';
+        if (err.message.includes('権限')) alert(err.message);
     }
 }
 
@@ -201,16 +256,22 @@ function renderAttendanceSummaryTable(summaries) {
 
 
 // -------------------------------------------------------------
-// 【勤怠セクション】 日次勤怠ログの表示とフィルタリング (新ロジック採用)
+// 【勤怠セクション】 日次勤怠ログの表示とフィルタリング
 // -------------------------------------------------------------
 
 async function fetchAndDisplaySummaries() {
+    const headers = getAuthHeaders();
+    if (!headers['Authorization']) return;
+
     try {
-        const response = await fetch('/api/summaries/limitsummaries'); 
+        // headersにX-Operator-Idが含まれるようになりました
+        const response = await fetch('/api/summaries/limitsummaries', { headers }); 
+        
         if (!response.ok) {
+             if (response.status === 403) throw new Error('アクセス権限がありません。');
              const errorText = await response.text();
              console.error('APIエラーレスポンス(勤怠ログ):', errorText);
-            throw new Error(`勤怠サマリーの取得に失敗しました (ステータス: ${response.status})。`);
+             throw new Error(`勤怠サマリーの取得に失敗しました (ステータス: ${response.status})。`);
         }
         
         const summaries = await response.json(); 
@@ -231,6 +292,7 @@ async function fetchAndDisplaySummaries() {
         if (tableBody) {
              tableBody.innerHTML = `<tr><td colspan="${COL_SPAN}" style="color: red; text-align: center;">エラー: ${error.message}</td></tr>`;
         }
+        if (error.message.includes('権限')) alert(error.message);
     }
 }
 
@@ -373,10 +435,24 @@ function applyFiltersAndRenderTable(summaries) {
             <td>${formatTime(sum.actualInTime)}</td>
             <td>${sum.totalBreakMinutes ? (sum.totalBreakMinutes + '分') : '---'}</td> 
             <td>${formatTime(sum.actualOutTime)}</td>
+            <td>${sum.totalWorkMinutes ? (sum.totalWorkMinutes + '分') : '---'}</td> 
             <td><span class="${approvalClass}">${approvalText}</span></td> 
             <td>${actions}</td>
         `;
         tableBody.appendChild(row);
+    });
+
+    // -----------------------------------------------------------------
+    // ★★★ 修正機能の実装: edit-btn クリック時のイベントリスナー設定 ★★★
+    // -----------------------------------------------------------------
+    document.querySelectorAll('#attendance-logs .edit-btn').forEach(button => {
+        button.addEventListener('click', (event) => {
+            const summaryId = event.currentTarget.dataset.id;
+            if (summaryId) {
+                // 修正専用の画面（edit_attendance.html）にIDを渡して遷移
+                window.location.href = `edit_attendance.html?summaryId=${summaryId}`;
+            }
+        });
     });
 
     // 単体承認ボタンにイベントリスナーを設定
@@ -403,7 +479,7 @@ function applyFiltersAndRenderTable(summaries) {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-Operator-Id': approverId 
+                        ...getAuthHeaders() // getAuthHeaders()にX-Operator-Idが含まれるようになりました
                     },
                     body: JSON.stringify({ 
                         summaryIds: [parseInt(summaryId, 10)], 
@@ -434,11 +510,75 @@ function applyFiltersAndRenderTable(summaries) {
 
 
 document.addEventListener('DOMContentLoaded', function () {
-    // ------------------------------------------
-    // 共通初期処理
-    // ------------------------------------------
+    
+    // --- ロールに基づく画面表示制御の実行 ---
+    const userRole = getLoggedInUserRole();
+    const employeeId = getLoggedInEmployeeId(); 
+    
+    // 1. 権限がないユーザーのチェック（ログインセッションの確認）
+    if (!employeeId || userRole === 'UNKNOWN') {
+        alert('セッション情報が無効です。再度ログインしてください。');
+        window.location.href = 'admin_login.html';
+        return; 
+    }
+    
+    // 2. EMP ロール時の処理（リダイレクトを推奨）
+    if (userRole === 'EMP') {
+        // EMPは管理者画面にいるべきではないため、専用画面へ即座にリダイレクト
+        window.location.href = 'emp_main.html'; 
+        return;
+    }
+
+
+    // 3. ADMIN/MGR/OWNER向け初期処理（EMPではない場合のみ実行）
     fetchAndRenderEmployees();
     fetchMonthlySummary();
+    fetchAndRenderAttendanceSummary();
+    fetchAndDisplaySummaries();
+
+
+    // ------------------------------------------
+    // 共通のイベントリスナー設定（ロールによらず動作させる）
+    // ------------------------------------------
+    const searchButton = document.querySelector('#search-button');
+    if (searchButton) {
+        searchButton.addEventListener('click', handleSearch);
+    }
+    
+    const executeAggregationBtn = document.getElementById('execute-aggregation-btn');
+    const periodSelectCheck = document.getElementById('aggregation-period-select');
+
+    if (executeAggregationBtn && periodSelectCheck) {
+        executeAggregationBtn.addEventListener('click', () => {
+            fetchAndRenderAttendanceSummary();
+        });
+    }
+
+    // 従業員マスタ検索イベント
+    const searchEmpBtn = document.getElementById('employee-search-btn');
+    const searchEmpInput = document.getElementById('employee-search-input');
+    if (searchEmpBtn && searchEmpInput) {
+        searchEmpBtn.addEventListener('click', async () => {
+            const keyword = searchEmpInput.value.trim();
+            try {
+                // headersにX-Operator-Idが含まれるようになりました
+                const res = await fetch(`/api/employees?keyword=${encodeURIComponent(keyword)}&limit=3`, { headers: getAuthHeaders() }); 
+                
+                if (!res.ok) throw new Error('検索失敗');
+                const employees = await res.json();
+                
+                const activeEmployees = employees.filter(emp => emp.active === true);
+                renderEmployeeRows(activeEmployees);
+            } catch (err) {
+                alert('検索に失敗しました');
+            }
+        });
+        searchEmpInput.addEventListener('keydown', e => {
+            if (e.key === 'Enter') searchEmpBtn.click();
+        });
+    }
+    
+    // 給与計算セクションの期間プルダウンの初期化（ADMIN/OWNERのみ実行）
     const periodSelect = document.getElementById('aggregation-period-select');
     if (periodSelect) {
         periodSelect.innerHTML = ''; 
@@ -462,63 +602,5 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             periodSelect.appendChild(option);
         }
-    }
-    
-    // 【給与計算】セクションの初期表示
-    fetchAndRenderAttendanceSummary(); 
-    
-    // 【勤怠ログ】セクションの初期表示とプルダウン設定
-    fetchAndDisplaySummaries();
-    
-    // ------------------------------------------
-    // 【勤怠ログ】セクション イベントリスナー
-    // ------------------------------------------
-    const searchButton = document.querySelector('#search-button');
-    if (searchButton) {
-        searchButton.addEventListener('click', handleSearch);
-    }
-
-    // 期間入力フィールドはHTMLにIDがないため、ここでは参照できません
-    const approveBtn = document.getElementById('batch-approve-btn');
-
-    // 一括承認ボタンのイベントリスナー（デバッグ用ロジック）
-    if (approveBtn) {
-        approveBtn.addEventListener('click', async () => {
-             alert("このボタンは現在無効化されています。HTMLにID: 'batch-approve-btn'と期間入力フィールドを追加してください。");
-        });
-    }
-
-    // ------------------------------------------
-    // 【給与計算】手動実行ボタンのイベントリスナー
-    // ------------------------------------------
-    const executeAggregationBtn = document.getElementById('execute-aggregation-btn');
-    const periodSelectCheck = document.getElementById('aggregation-period-select');
-
-    if (executeAggregationBtn && periodSelectCheck) {
-        executeAggregationBtn.addEventListener('click', () => {
-            fetchAndRenderAttendanceSummary();
-        });
-    }
-
-    // 従業員マスタ検索イベント
-    const searchEmpBtn = document.getElementById('employee-search-btn');
-    const searchEmpInput = document.getElementById('employee-search-input');
-    if (searchEmpBtn && searchEmpInput) {
-        searchEmpBtn.addEventListener('click', async () => {
-            const keyword = searchEmpInput.value.trim();
-            try {
-                const res = await fetch(`/api/employees?keyword=${encodeURIComponent(keyword)}&limit=3`);
-                if (!res.ok) throw new Error('検索失敗');
-                const employees = await res.json();
-                
-                const activeEmployees = employees.filter(emp => emp.active === true);
-                renderEmployeeRows(activeEmployees);
-            } catch (err) {
-                alert('検索に失敗しました');
-            }
-        });
-        searchEmpInput.addEventListener('keydown', e => {
-            if (e.key === 'Enter') searchEmpBtn.click();
-        });
     }
 });

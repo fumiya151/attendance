@@ -17,7 +17,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class LoginController {
     private final LoginService loginService;
-    private static final String ROLE_DENIED_STATUS = "ROLE_DENIED";
 
     /**
      * ログインAPIのエンドポイントです。
@@ -37,24 +36,14 @@ public class LoginController {
         // サービスから認証結果を取得
         Map<String, String> result = loginService.loginAndGenerateToken(
                 loginRequest.getUsername(),
-                loginRequest.getPassword(),
-                loginRequest.getRole());
+                loginRequest.getPassword());
 
-        // 認証成功の判定: tokenとemployeeIdの両方が存在する場合
-        if (result != null && result.containsKey("token") && result.containsKey("employeeId")) {
-            // トークンと employeeId の両方を返す
+        // 認証成功の判定: resultがnullでない場合
+        if (result != null) {
             return ResponseEntity.ok(result);
         }
 
-        // 認証失敗の判定
-
-        if (result != null && ROLE_DENIED_STATUS.equals(result.get("status"))) {
-            // 権限がない場合 (パスワードは正しいがロール制限で拒否)
-            return ResponseEntity.status(HttpStatus.FORBIDDEN) // 403 Forbidden
-                    .body(Map.of("message", "アクセス権限がありません。ログインする画面が異なります。"));
-        }
-
-        // Serviceがnullを返した場合も含む
+        // Serviceがnullを返した場合 (認証失敗)
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED) // 401 Unauthorized
                 .body(Map.of("message", "ユーザーIDまたはパスワードが正しくありません。"));
     }

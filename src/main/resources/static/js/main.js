@@ -21,7 +21,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // 従業員リストの生成 (APIから取得)
     async function fetchAndRenderEmployees() {
         try {
+            // ★修正点: 打刻画面は認証なしのため、ヘッダーなしでアクセス (Java側でpermitAllが必要)
             const response = await fetch('/api/employees');
+            
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -55,6 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const encodedEmployeeId = encodeURIComponent(employeeId);
+            // ★修正点: 打刻画面は認証なしのため、ヘッダーなしでアクセス (Java側でpermitAllが必要)
             const response = await fetch(`/api/attendance/next-available/${encodedEmployeeId}`);
             
             if (response.ok) {
@@ -110,11 +113,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // 打刻対象者が操作者IDを兼ねる
             const operatorId = selectedUserCode; 
 
+            // ★修正点: 打刻APIもpermitAllを前提とし、X-Operator-Idのみヘッダーに付与
             const response = await fetch('/api/attendance/stamp', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    // ★ 修正点: 必須ヘッダー X-Operator-Id を追加
                     'X-Operator-Id': operatorId 
                 },
                 body: JSON.stringify(attendanceData),

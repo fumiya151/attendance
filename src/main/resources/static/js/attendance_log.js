@@ -18,6 +18,24 @@ function getEmployeeIdFromName(employeeName) {
     return summary ? summary.employeeId : null;
 }
 
+// --- JWTトークンとオペレーターIDを取得するヘルパー関数 (★追加★) ---
+function getAuthHeaders() {
+    const token = sessionStorage.getItem('token');
+    const employeeId = sessionStorage.getItem('loggedInEmployeeId');
+    
+    if (!token || !employeeId) {
+        alert("認証セッションが無効です。再度ログインしてください。");
+        // /html/admin_login.html は SecurityConfiguration で PermitAll されています
+        window.location.href = '/html/admin_login.html'; 
+        return {};
+    }
+    
+    return {
+        'Authorization': `Bearer ${token}`,
+        'X-Operator-Id': employeeId 
+    };
+}
+
 
 // 取得した全サマリーを保持するためのグローバル変数
 let allSummaries = []; 
@@ -31,7 +49,9 @@ document.addEventListener('DOMContentLoaded', function () {
     
     // 検索ボタンにイベントリスナーを設定
     const searchButton = document.querySelector('#search-button');
-    searchButton.addEventListener('click', handleSearch);
+    if (searchButton) {
+        searchButton.addEventListener('click', handleSearch);
+    }
 
     const approveBtn = document.getElementById('batch-approve-btn');
     // 期間入力フィールドの参照
@@ -67,14 +87,12 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             try {
-                const approverId = getLoggedInEmployeeId(); 
-                
-                // API呼び出し: POST /api/summaries/approve/list (IDリストと期間の両方を送信)
+                // API呼び出し: POST /api/summaries/approve/list
                 const res = await fetch(`/api/summaries/approve/list`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-Operator-Id': approverId 
+                        ...getAuthHeaders() // ★修正点: 認証ヘッダーを付与
                     },
                     body: JSON.stringify({ 
                         summaryIds: pendingIds, 
@@ -92,8 +110,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     throw new Error(data.message || '承認処理中に不明なエラーが発生しました。');
                 }
             } catch (error) {
-                if (error.message.includes("操作を行う従業員IDが見つかりません")) {
-                    alert('❌ 承認失敗: ログインセッションが無効です。ログアウトして再度ログインしてください。');
+                if (error.message.includes("操作を行う従業員IDが見つかりません") || error.message.includes("認証セッションが無効です")) {
+                    // getAuthHeaders内でリダイレクトされる可能性もあるため、冗長なチェック
+                    console.error("Batch approval authentication error:", error);
                 } else {
                     alert(`❌ 承認に失敗しました: ${error.message}`);
                     console.error("Batch approval error:", error);
@@ -132,10 +151,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 async function fetchAndDisplaySummaries() {
+    const headers = getAuthHeaders();
+    if (!headers['Authorization']) return; // トークンがない場合は処理を中断
+
     try {
-        const response = await fetch('/api/summaries'); 
+        // ★修正点: 認証ヘッダーを付与
+        const response = await fetch('/api/summaries', { headers }); 
+        
         if (!response.ok) {
-            throw new Error('勤怠サマリーの取得に失敗しました。');
+             const errorText = await response.text();
+             if (response.status === 403) throw new Error('アクセス権限がありません。');
+             throw new Error(`勤怠サマリーの取得に失敗しました (ステータス: ${response.status} / エラー: ${errorText.substring(0, 50)}...)`);
         }
         
         const summaries = await response.json(); 
@@ -150,8 +176,9 @@ async function fetchAndDisplaySummaries() {
 
     } catch (error) {
         console.error('エラー:', error);
-        // colspan が 9列ある前提のようですが、このHTMLでは 8列（日付, 名前, 出/休/退/実働/ステータス/アクション）なので 8 を使用します
+        // colspan を 9 に修正（前の会話で 9 列のデータがあると確認されたため）
         document.querySelector('.data-table tbody').innerHTML = `<tr><td colspan="9" style="color: red; text-align: center;">エラー: ${error.message}</td></tr>`;
+        if (error.message.includes('権限')) alert(error.message);
     }
 }
 
@@ -240,7 +267,7 @@ function applyFiltersAndRenderTable(summaries) {
     const tableBody = document.querySelector('.data-table tbody');
     tableBody.innerHTML = ''; // テーブルをクリア
 
-    // HTMLの列数に合わせて colspan を設定 (このコード内では 9列目までデータが入っている想定)
+    // HTMLの列数に合わせて colspan を設定
     const COL_SPAN = 9; 
 
     if (summaries.length === 0) {
@@ -338,14 +365,12 @@ function applyFiltersAndRenderTable(summaries) {
             }
 
             try {
-                const approverId = getLoggedInEmployeeId();
-                
                 // API呼び出し: POST /api/summaries/approve/list (1件のIDリストと期間を送信)
                 const res = await fetch(`/api/summaries/approve/list`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-Operator-Id': approverId 
+                        ...getAuthHeaders() // ★修正点: 認証ヘッダーを付与
                     },
                     body: JSON.stringify({ 
                         summaryIds: [parseInt(summaryId, 10)], // 1件のIDリスト
@@ -363,8 +388,8 @@ function applyFiltersAndRenderTable(summaries) {
                     throw new Error(data.message || '単体承認処理中に不明なエラーが発生しました。');
                 }
             } catch (error) {
-                if (error.message.includes("操作を行う従業員IDが見つかりません")) {
-                    alert('❌ 承認失敗: ログインセッションが無効です。ログアウトして再度ログインしてください。');
+                if (error.message.includes("操作を行う従業員IDが見つかりません") || error.message.includes("認証セッションが無効です")) {
+                    console.error("Single approval authentication error:", error);
                 } else {
                     alert(`❌ 単体承認に失敗しました: ${error.message}`);
                     console.error("Single approval error:", error);
@@ -384,6 +409,9 @@ function applyFiltersAndRenderTable(summaries) {
  */
 async function exportToPdf(employeeId, yearMonthStr, employeeName) {
     
+    const headers = getAuthHeaders();
+    if (!headers['Authorization']) return; // トークンがない場合は処理を中断
+
     // ユーザーに処理中であることを知らせる
     const originalButton = document.getElementById('csv-export-btn');
     const originalButtonText = originalButton.innerHTML;
@@ -393,15 +421,16 @@ async function exportToPdf(employeeId, yearMonthStr, employeeName) {
     try {
         // バックエンドAPIの呼び出し
         const url = `/api/summaries/export/pdf?employeeId=${employeeId}&yearMonth=${yearMonthStr}`;
+        // ★修正点: 認証ヘッダーを付与
         const response = await fetch(url, {
             method: 'GET',
+            headers: headers
         });
         
         // エラー処理
         if (!response.ok) {
             // エラー応答がテキスト（日本語メッセージ）の場合を考慮
             const errorText = await response.text();
-            // substring(0, 100) を使用しているため、エラーが長すぎる場合も安心
             throw new Error(`PDF生成APIエラー (${response.status}): ${errorText.substring(0, 100)}...`); 
         }
 

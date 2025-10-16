@@ -19,6 +19,27 @@ function getLoggedInEmployeeId() {
     return employeeId;
 }
 
+/**
+ * JWTトークンとX-Operator-Idを取得するヘルパー関数 (★追加★)
+ */
+function getAuthHeaders() {
+    const token = sessionStorage.getItem('token');
+    const employeeId = sessionStorage.getItem('loggedInEmployeeId');
+    
+    // JWTトークンがない場合はリダイレクト処理を行い、ヘッダー返却はエラー処理に任せる
+    if (!token || !employeeId) {
+        // ここではエラーをthrowするgetLoggedInEmployeeId()に依存しているため、
+        // トークンがない場合も認証エラーとして処理を進める
+        return {};
+    }
+    
+    return {
+        'Authorization': `Bearer ${token}`,
+        'X-Operator-Id': employeeId 
+    };
+}
+
+
 // 新規従業員登録フォーム送信
 const form = document.getElementById('employee-register-form');
 form.addEventListener('submit', async (e) => {
@@ -58,13 +79,22 @@ form.addEventListener('submit', async (e) => {
     };
 
     try {
-        const operatorId = getLoggedInEmployeeId(); // ★ 修正点1: ログインIDを取得
+        const headers = getAuthHeaders();
+        // getLoggedInEmployeeId()はオペレーターIDを取得するために必要なため、ここでは重複を避けてJWTヘッダーのみ処理
+
+        if (!headers['Authorization']) {
+            // トークンがない場合、getLoggedInEmployeeIdがエラーを投げるはずだが、念のため
+            showMessage('❌ 認証情報が不足しています。ログインし直してください。', true);
+            return;
+        }
         
+        // POST /api/employees の呼び出し
         const res = await fetch('/api/employees', {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
-                'X-Operator-Id': operatorId // ★ 修正点2: 必須ヘッダーを追加
+                // ★修正点: 認証ヘッダーと監査ヘッダーをまとめて付与
+                ...headers 
             },
             body: JSON.stringify(data)
         });

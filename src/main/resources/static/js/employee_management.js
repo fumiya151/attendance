@@ -1,4 +1,4 @@
-// employee_management.js
+// employee_management.js (最終修正版: JWT認証対応)
 
 /**
  * セッションストレージからログイン中の従業員IDを取得する。
@@ -13,12 +13,42 @@ function getLoggedInEmployeeId() {
     return employeeId;
 }
 
+/**
+ * JWTトークンとX-Operator-Idを取得するヘルパー関数 (★追加★)
+ */
+function getAuthHeaders() {
+    const token = sessionStorage.getItem('token');
+    const employeeId = sessionStorage.getItem('loggedInEmployeeId');
+    
+    // トークンチェックとリダイレクト
+    if (!token || !employeeId) {
+        alert("認証セッションが無効です。再度ログインしてください。");
+        // 管理者画面のログインは admin_login.html
+        window.location.href = '/html/admin_login.html'; 
+        return {};
+    }
+    
+    return {
+        'Authorization': `Bearer ${token}`,
+        'X-Operator-Id': employeeId // X-Operator-Id は常に付与
+    };
+}
+
+
 // 従業員一覧取得＆テーブル描画
 async function fetchAndRenderEmployees() {
+    const headers = getAuthHeaders();
+    if (!headers['Authorization']) return;
+
     try {
-        // 全アクティブ従業員の限定情報を取得
-        const res = await fetch('/api/employees');
-        if (!res.ok) throw new Error('取得失敗');
+        // ★修正点: 認証ヘッダーを付与
+        const res = await fetch('/api/employees', { headers });
+        
+        if (!res.ok) {
+             const errorText = await res.text();
+             if (res.status === 403) throw new Error('アクセス権限がありません。');
+             throw new Error(`取得失敗 (Status: ${res.status} / Error: ${errorText.substring(0, 50)}...)`);
+        }
         const employees = await res.json();
         
         // 念のためクライアント側でもアクティブな従業員のみをフィルタリング
@@ -26,7 +56,7 @@ async function fetchAndRenderEmployees() {
         
         renderEmployeeRows(activeEmployees);
     } catch (err) {
-        alert('従業員一覧の取得に失敗しました');
+        alert(`従業員一覧の取得に失敗しました: ${err.message}`);
     }
 }
 
@@ -56,7 +86,8 @@ function renderEmployeeRows(list) {
         
         // 編集ボタンのイベントリスナー
         tr.querySelector('.edit-btn').addEventListener('click', () => {
-            window.location.href = `edit_employee.html?employeeId=${emp.employeeId}`;
+            // ★修正点: パスを統一
+            window.location.href = `/html/edit_employee.html?employeeId=${emp.employeeId}`;
         });
         
         // 削除ボタン (論理削除/退職処理) のイベントリスナー
@@ -69,13 +100,14 @@ function renderEmployeeRows(list) {
             
             if (confirm(`従業員コード: ${employeeId} の従業員を本当に削除しますか？`)) {
                 try {
-                    const operatorId = getLoggedInEmployeeId();
-                    
+                    const headers = getAuthHeaders();
+                    if (!headers['Authorization']) return;
+
+                    // DELETE /api/employees/{id} の呼び出し
                     const res = await fetch(`/api/employees/${employeeId}`, {
                         method: 'DELETE', 
-                        headers: {
-                            'X-Operator-Id': operatorId
-                        }
+                        // ★修正点: 認証ヘッダーを付与 (X-Operator-IdはgetAuthHeadersに含まれる)
+                        headers: headers
                     });
                     
                     if (res.ok) {
@@ -139,16 +171,25 @@ document.addEventListener('DOMContentLoaded', () => {
     if (searchBtn && searchInput) {
         searchBtn.addEventListener('click', async () => {
             const keyword = searchInput.value.trim();
+            const headers = getAuthHeaders();
+            if (!headers['Authorization']) return;
+            
             try {
-                const res = await fetch(`/api/employees?keyword=${encodeURIComponent(keyword)}`);
-                if (!res.ok) throw new Error('検索失敗');
+                // ★修正点: 認証ヘッダーを付与
+                const res = await fetch(`/api/employees?keyword=${encodeURIComponent(keyword)}`, { headers });
+                
+                if (!res.ok) {
+                    const errorText = await res.text();
+                    if (res.status === 403) throw new Error('アクセス権限がありません。');
+                    throw new Error(`検索失敗 (Status: ${res.status} / Error: ${errorText.substring(0, 50)}...)`);
+                }
                 const employees = await res.json();
                 
                 // 検索結果に対してもアクティブフィルタリングを適用
                 const activeEmployees = employees.filter(emp => emp.active === true);
                 renderEmployeeRows(activeEmployees);
             } catch (err) {
-                alert('検索に失敗しました');
+                alert(`検索に失敗しました: ${err.message}`);
             }
         });
         searchInput.addEventListener('keydown', e => {
@@ -162,7 +203,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (executeAggregationBtn && periodSelect) {
         executeAggregationBtn.addEventListener('click', () => {
             const selectedPeriod = periodSelect.value;
-            window.location.href = `payroll_calculation.html?period=${encodeURIComponent(selectedPeriod)}`;
+            // ★修正点: パスを統一
+            window.location.href = `/html/payroll_calculation.html?period=${encodeURIComponent(selectedPeriod)}`;
         });
     }
 
@@ -202,13 +244,16 @@ if(form) {
         };
         
         try {
-            const operatorId = getLoggedInEmployeeId();
-            
+            const headers = getAuthHeaders();
+            if (!headers['Authorization']) return;
+
+            // POST /api/employees の呼び出し
             const res = await fetch('/api/employees', {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'X-Operator-Id': operatorId
+                    // ★修正点: 認証ヘッダーを付与 (X-Operator-IdはgetAuthHeadersに含まれる)
+                    ...headers 
                 },
                 body: JSON.stringify(data)
             });
@@ -216,7 +261,9 @@ if(form) {
             if (res.ok) {
                 alert('登録しました');
                 form.reset(); // フォームをリセット
-                modal.style.display = 'none'; // モーダルを非表示
+                // modalが存在することを確認（グローバルスコープで定義されているはず）
+                const modal = document.getElementById('register-modal');
+                if (modal) modal.style.display = 'none'; // モーダルを非表示
                 await fetchAndRenderEmployees(); 
             } else {
                 const err = await res.json();

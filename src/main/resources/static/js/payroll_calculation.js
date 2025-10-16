@@ -1,3 +1,5 @@
+// payroll_calculation.js (最終修正版: JWT認証対応)
+
 // ログイン中の従業員IDをセッションストレージから取得する関数 (共通JSファイルに存在することを前提)
 function getLoggedInEmployeeId() {
     const employeeId = sessionStorage.getItem('loggedInEmployeeId'); 
@@ -5,6 +7,26 @@ function getLoggedInEmployeeId() {
         throw new Error("操作を行う従業員IDが見つかりません。ログインが必要です。");
     }
     return employeeId;
+}
+
+/**
+ * JWTトークンとX-Operator-Idを取得するヘルパー関数 (★追加★)
+ */
+function getAuthHeaders() {
+    const token = sessionStorage.getItem('token');
+    const employeeId = sessionStorage.getItem('loggedInEmployeeId');
+    
+    if (!token || !employeeId) {
+        alert("認証セッションが無効です。再度ログインしてください。");
+        // 給与計算は管理者画面からの遷移のため、こちらにリダイレクト
+        window.location.href = '/html/admin_login.html'; 
+        return {};
+    }
+    
+    return {
+        'Authorization': `Bearer ${token}`,
+        'X-Operator-Id': employeeId 
+    };
 }
 
 
@@ -41,10 +63,17 @@ document.addEventListener('DOMContentLoaded', function () {
     // ------------------------------------------
     function fetchAndDisplayPayroll(start, end) {
         const url = `/api/payroll/calculate?startDate=${start}&endDate=${end}`;
+        
+        const headers = getAuthHeaders();
+        if (!headers['Authorization']) {
+            tableBody.innerHTML = '<tr><td colspan="4" style="color: red;">❌ エラー: 認証情報がありません。ログインし直してください。</td></tr>';
+            return;
+        }
 
         tableBody.innerHTML = '<tr><td colspan="4">計算中...</td></tr>';
         
-        fetch(url)
+        // ★修正点: 認証ヘッダーを付与
+        fetch(url, { headers })
             .then(response => {
                 if (!response.ok) {
                     return response.text().then(text => { 
@@ -52,8 +81,6 @@ document.addEventListener('DOMContentLoaded', function () {
                         let errorMsg = 'サーバー側で予期せぬエラーが発生しました。';
                         try {
                             const jsonError = JSON.parse(text);
-                            // Spring BootのWARNログ (時給なし) がJSON形式で返ることはないため、
-                            // 通常のControllerエラーレスポンスの 'message' を利用
                             if (jsonError.message) errorMsg = jsonError.message;
                         } catch (e) {}
                         // 4xx, 5xx ステータスの場合
@@ -110,7 +137,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     } else {
        // URLパラメータがない場合、計算ボタンクリックを待つ
-        tableBody.innerHTML = '<tr><td colspan="4">集計期間を選択し、「集計実行」ボタンを押してください。</td></tr>';
+       tableBody.innerHTML = '<tr><td colspan="4">集計期間を選択し、「集計実行」ボタンを押してください。</td></tr>';
         
         // ★ 期間が未設定の場合、入力フィールドに今月の日付を初期設定する
         const today = new Date();

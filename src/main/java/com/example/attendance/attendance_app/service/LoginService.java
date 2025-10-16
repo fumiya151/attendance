@@ -1,127 +1,59 @@
 package com.example.attendance.attendance_app.service;
 
-import java.util.Date;
-import java.util.Map;
-import java.util.List;
-import java.util.Optional;
-import org.springframework.security.crypto.bcrypt.BCrypt;
-import org.springframework.stereotype.Service;
 import com.example.attendance.attendance_app.model.Employee;
 import com.example.attendance.attendance_app.model.EmployeeRole;
-import com.example.attendance.attendance_app.repository.LoginRepository;
 import com.example.attendance.attendance_app.repository.EmployeeRoleRepository;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.security.Keys;
+import com.example.attendance.attendance_app.repository.LoginRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class LoginService {
     private final LoginRepository loginRepository;
     private final EmployeeRoleRepository employeeRoleRepository;
-
-    private final byte[] jwtSecretBytes = "yourSuperLongSecretKeyForHS512AlgorithmMustBeAtLeast64BytesLong0123456789"
-            .getBytes();
-    private final long jwtExpirationMs = 3600000;
-    private static final String ROLE_DENIED_STATUS = "ROLE_DENIED";
+    private final JwtService jwtService; // Inject JwtService
+    private final PasswordEncoder passwordEncoder; // Inject PasswordEncoder
 
     /**
-     * ログイン認証とJWTトークン発行を行うメソッドです.
+     * 従業員IDとパスワードで認証し、成功時にJWTトークンを発行します。
      *
-     * 【機能】
-     * 1. 従業員IDとパスワードで認証を行います。
-     * 2. 要求ロール('admin'/'user')に基づき、従業員のロール権限を確認します。
-     * 3. 認証・権限チェック成功時、JWTトークンを生成して返却します。
-     *
-     * 【注意事項】
-     * ・現在は管理者ログイン('admin')時のロールチェックはスキップされます。
-     * ・打刻ログイン('user')は、ロールコードが'ADMIN'または'MGR'の従業員に限定されます。
-     *
-     * @param employeeId    従業員コード (username)
-     * @param password      パスワード
-     * @param requestedRole フロントエンドから送られた要求ロール ('user' or 'admin')
-     * @return 成功時はMap<"token", String, "employeeId",
-     *         String>、認証失敗時はnull、ロール拒否時はMap<"status", "ROLE_DENIED">
+     * @param employeeId 従業員コード (username)
+     * @param password   パスワード
+     * @return 成功時はMap<"token", String, "employeeId", String, "actualRole", String>、
+     *         認証失敗時はnull
      */
-    public Map<String, String> loginAndGenerateToken(String employeeId, String password, String requestedRole) {
+    public Map<String, String> loginAndGenerateToken(String employeeId, String password) {
         Optional<Employee> employeeOptional = loginRepository.findByEmployeeId(employeeId);
 
         if (employeeOptional.isPresent()) {
             Employee employee = employeeOptional.get();
-            String hashedPassword = employee.getPassword();
+            // BCryptPasswordEncoderを使用してパスワードを検証
+            if (passwordEncoder.matches(password, employee.getPassword())) {
 
-            if (BCrypt.checkpw(password, hashedPassword)) {
-
-                // --- 認証成功後の処理 ---
-
-                // 【管理者ログインの制限を一時的に解除】
-                if ("admin".equals(requestedRole)) {
-                    // パスワード認証が通ったため、ロールチェックをスキップして全員許可
-                    String token = generateJwtToken(employee);
-                    return Map.of("token", token, "employeeId", employee.getEmployeeId());
-                }
-
-                // 1. 従業員の実際のロールを取得
+                // 従業員のロールを取得
                 List<EmployeeRole> employeeRoles = employeeRoleRepository.findByEmployeeId(employeeId);
-
-                if (employeeRoles.isEmpty()) {
-                    // ロールが割り当てられていない場合はロール拒否と見なす
-                    return Map.of("status", ROLE_DENIED_STATUS);
+                String actualRoleCode = "USER"; // デフォルトロール
+                if (!employeeRoles.isEmpty()) {
+                    // 最初のロールを返す (アプリケーションのロジックに合わせて調整が必要な場合があります)
+                    actualRoleCode = employeeRoles.get(0).getRole().getRoleCode();
                 }
 
-                String actualRoleCode = employeeRoles.get(0).getRole().getRoleCode();
-
-                boolean isPermitted = false;
-
-                // 【打刻ログイン ('user') 制限ロジック】: ADMIN または MGR のみ許可
-                if ("user".equals(requestedRole)) {
-                    final String[] ADMIN_AND_MGR_ROLES = { "ADMIN", "MGR" };
-
-                    for (String roleCode : ADMIN_AND_MGR_ROLES) {
-                        if (roleCode.equals(actualRoleCode)) {
-                            isPermitted = true;
-                            break;
-                        }
-                    }
-                }
-
-                if (!isPermitted) {
-                    // ★ 修正点: ロール制限に引っかかった場合は、特別なMapを返す
-                    return Map.of("status", ROLE_DENIED_STATUS);
-                }
-
-                // 認証成功 (ロール制限もクリア)
-                String token = generateJwtToken(employee);
+                // JwtServiceを使用してトークンを生成
+                String token = jwtService.generateToken(employee);
 
                 return Map.of(
                         "token", token,
-                        "employeeId", employee.getEmployeeId());
+                        "employeeId", employee.getEmployeeId(),
+                        "actualRole", actualRoleCode);
             }
         }
         // ユーザーIDが見つからない、またはパスワードが不正
         return null;
-    }
-
-    /**
-     * JWTトークンを生成するメソッドです.
-     *
-     * 【機能】
-     * 従業員情報に基づき、有効期限付きのJWT(JSON Web Token)を生成します。
-     *
-     * 【注意事項】
-     * 有効期限はjwtExpirationMsで定義されています。
-     *
-     * @param employee 従業員エンティティ
-     * @return JWTトークン文字列
-     */
-    private String generateJwtToken(Employee employee) {
-        javax.crypto.SecretKey key = Keys.hmacShaKeyFor(jwtSecretBytes);
-        return Jwts.builder()
-                .setSubject(employee.getEmployeeId())
-                .setIssuedAt(new Date())
-                .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs))
-                .signWith(key, SignatureAlgorithm.HS512)
-                .compact();
     }
 }

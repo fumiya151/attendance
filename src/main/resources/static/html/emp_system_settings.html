@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>勤怠管理システム - 設定</title>
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/system_settings.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+
+<body>
+    <div class="admin-dashboard">
+
+        <aside class="sidebar">
+            <h1 class="logo">勤 怠<br>管 理</h1>
+            <nav class="nav-menu">
+                <a href="emp_main.html" class="nav-item" data-target="attendance-logs">
+                    <span class="nav-icon-wrapper"><i class="fas fa-clock"></i></span> 
+                    <span class="nav-text">勤怠</span>
+                </a>
+                <a href="system_settings.html" class="nav-item active" data-target="settings">
+                    <span class="nav-icon-wrapper"><i class="fas fa-cogs"></i></span> 
+                    <span class="nav-text">設定</span>
+                </a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="header">
+                <h2>設定</h2>
+                <div class="user-info">
+                    <span>管理者 (Admin)</span>
+                    <a href="admin_login.html" class="logout-btn">ログアウト</a>
+                </div>
+            </header>
+
+            <section id="settings" class="content-view active">
+                <div class="card-grid">
+                    <div class="card settings-card">
+                        <h3 class="card-title">通知設定</h3>
+                        <div class="setting-item">
+                            <label for="notification-email">通知先メールアドレス</label>
+                            <input type="email" id="notification-email" value="admin@example.com" class="form-input">
+                        </div>
+                        <div class="setting-item checkbox-item">
+                            <input type="checkbox" id="enable-notifications" checked>
+                            <label for="enable-notifications">勤怠修正依頼の通知を有効にする</label>
+                        </div>
+                        <button class="primary-btn mt-10">保存</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

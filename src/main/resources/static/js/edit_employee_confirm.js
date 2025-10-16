@@ -8,6 +8,26 @@ function getLoggedInEmployeeId() {
     return employeeId;
 }
 
+/**
+ * JWTトークンとX-Operator-Idを取得するヘルパー関数 (★追加★)
+ */
+function getAuthHeaders() {
+    const token = sessionStorage.getItem('token');
+    const employeeId = sessionStorage.getItem('loggedInEmployeeId');
+    
+    // X-Operator-IdはgetLoggedInEmployeeId()で取得済みだが、JWTのチェックは必要
+    if (!token) {
+        alert("認証セッションが無効です。再度ログインしてください。");
+        window.location.href = '/html/admin_login.html'; 
+        // JWTトークンがない場合はヘッダーを返さない（この関数のロジックは他の場所でも使用されるため）
+        return {};
+    }
+    
+    return {
+        'Authorization': `Bearer ${token}`,
+    };
+}
+
 
 document.addEventListener('DOMContentLoaded', () => {
     const originalData = JSON.parse(sessionStorage.getItem('originalEmployeeData'));
@@ -63,17 +83,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // 「確定」ボタン
     document.getElementById('confirm-btn').addEventListener('click', async () => {
         try {
-            // ログインIDを取得（監査ヘッダー用）
+            // 監査ヘッダー用
             const operatorId = getLoggedInEmployeeId(); 
+            
+            // JWTヘッダー用
+            const authHeaders = getAuthHeaders();
+            if (!authHeaders['Authorization']) return; // トークンがない場合は処理中断
 
             // 更新対象ID (employeeId)
             const employeeIdToUpdate = editedData.employeeId; 
-
+            
+            // PUT /api/employees/{id} の呼び出し
             const res = await fetch(`/api/employees/${employeeIdToUpdate}`, {
                 method: 'PUT',
                 headers: { 
                     'Content-Type': 'application/json',
-                    // 監査ヘッダー
+                    // ★修正点: 認証ヘッダー (Authorization) を付与
+                    ...authHeaders,
+                    // 監査ヘッダー (X-Operator-Id) を付与
                     'X-Operator-Id': operatorId 
                 },
                 body: JSON.stringify(editedData)
@@ -88,11 +115,13 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                  // サーバーからのエラーレスポンスを詳細に表示
                  const errorData = await res.json();
-                 throw new Error(errorData.message || '更新に失敗しました。');
+                 // 403 Forbiddenなどのエラーもここでキャッチされる
+                 throw new Error(errorData.message || `更新に失敗しました (Status: ${res.status})`);
             }
         } catch (error) {
             // ログインID取得エラーもここでキャッチし、ユーザーに伝達
             alert(`更新処理エラー: ${error.message}`);
+            console.error("Employee update error:", error);
         }
     });
 });

@@ -7,6 +7,27 @@ function getLoggedInEmployeeId() {
     return employeeId;
 }
 
+/**
+ * JWTトークンとX-Operator-Idを取得するヘルパー関数 (★追加★)
+ */
+function getAuthHeaders() {
+    const token = sessionStorage.getItem('token');
+    const employeeId = sessionStorage.getItem('loggedInEmployeeId');
+    
+    if (!token || !employeeId) {
+        // 認証失敗時はログイン画面へリダイレクト
+        alert("認証セッションが無効です。再度ログインしてください。");
+        window.location.href = '/html/admin_login.html'; 
+        return {};
+    }
+    
+    return {
+        'Authorization': `Bearer ${token}`,
+        'X-Operator-Id': employeeId 
+    };
+}
+
+
 document.addEventListener('DOMContentLoaded', function () {
     const editForm = document.getElementById('attendance-edit-form');
     
@@ -23,9 +44,6 @@ document.addEventListener('DOMContentLoaded', function () {
     // ------------------------------------------
     // 1. データ取得とフォームへの設定
     // ------------------------------------------
-    // NOTE: DailyAttendanceSummaryServiceには単一サマリーを取得するAPIがないため、
-    // ここではリスト取得APIを再利用するか、またはサーバー側で専用APIが必要です。
-    // 今回は、仮のAPIエンドポイントを使います。
     fetchSummaryData(summaryId);
 
     // ------------------------------------------
@@ -38,16 +56,19 @@ document.addEventListener('DOMContentLoaded', function () {
      * @param {string} id サマリーID
      */
     async function fetchSummaryData(id) {
+        const headers = getAuthHeaders();
+        if (!headers['Authorization']) return;
+
         try {
-            // 仮の単体取得API: /api/summaries/123 のようなAPIが必要
-            // 実際には、Controller/Service/Repositoryの追加開発が必要です。
-            const res = await fetch(`/api/summaries/${id}`); 
+            // ★修正点: 認証ヘッダーを付与
+            const res = await fetch(`/api/summaries/${id}`, { headers }); 
             
             if (!res.ok) {
                 if (res.status === 404) {
                     throw new Error("指定された勤怠サマリーIDが見つかりません。");
                 }
-                throw new Error('勤怠データの取得に失敗しました。');
+                const errorText = await res.text();
+                throw new Error(`勤怠データの取得に失敗しました (Status: ${res.status} / Error: ${errorText.substring(0, 50)}...)`);
             }
             
             const summaryDto = await res.json();
@@ -61,7 +82,6 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('display-work-date').textContent = summaryDto.workDate;
             
             // フォーム入力項目の設定
-            // JSONの時刻文字列 (例: "09:00:00.000000") から HH:mm 部分を抽出
             document.getElementById('actualInTime').value = formatTimeForInput(summaryDto.actualInTime);
             document.getElementById('actualOutTime').value = formatTimeForInput(summaryDto.actualOutTime);
             document.getElementById('totalBreakMinutes').value = summaryDto.totalBreakMinutes;
@@ -113,11 +133,10 @@ document.addEventListener('DOMContentLoaded', function () {
             const updateData = {
                 id: parseInt(id, 10),
                 employeeId: employeeId,
-                // NOTE: Service側で時刻を再計算するため、ここでは必要な情報のみ送ります
-                actualInTime: inTime + ":00", // "HH:mm:ss" 形式に修正
+                // "HH:mm:ss" 形式に修正
+                actualInTime: inTime + ":00", 
                 actualOutTime: outTime + ":00",
                 totalBreakMinutes: breakMinutes,
-                // status: "PENDING" に戻すなどのロジックがService側で実行されます
             };
 
             // 仮の更新API: PUT /api/summaries/{id}
@@ -125,7 +144,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-Operator-Id': updaterId
+                    ...getAuthHeaders() // ★修正点: 認証ヘッダーを付与
                 },
                 body: JSON.stringify(updateData)
             });
