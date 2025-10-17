@@ -31,3 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# application.properties (機密情報やローカル設定が含まれるため)
+application-dev.properties
