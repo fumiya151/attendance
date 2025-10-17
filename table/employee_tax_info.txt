@@ -1,0 +1,28 @@
+-- テーブル名: employee_tax_info
+-- 目的: 従業員ごとの税金計算に必要な情報（扶養人数、住民税など）を保持する
+
+CREATE TABLE employee_tax_info (
+    -- 主キー/外部キー: 従業員ID
+    employee_id VARCHAR(255) NOT NULL PRIMARY KEY,
+    
+    -- 扶養人数（所得税の甲欄・乙欄適用基準に使用）
+    dependent_count INT NOT NULL DEFAULT 0,
+    
+    -- 住民税 特別徴収額（月額）
+    monthly_resident_tax DECIMAL(10, 0) NOT NULL DEFAULT 0,
+    
+    -- 住民税 適用開始月（YYYY-MM-DD形式だが、日部分は無視されることが多い）
+    resident_tax_start_month DATE,
+    
+    -- このレコードの設定適用開始日
+    effective_date DATE NOT NULL,
+    
+    -- 備考
+    notes VARCHAR(255),
+
+    -- 制約: 従業員テーブルへの外部キー制約（employeeテーブルが存在することが前提）
+    CONSTRAINT fk_tax_info_employee FOREIGN KEY (employee_id) REFERENCES employee(employee_id)
+);
+
+-- インデックス
+CREATE INDEX idx_eti_employee ON employee_tax_info (employee_id);

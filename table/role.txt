@@ -1,0 +1,16 @@
+CREATE TABLE role (
+    -- 主キー
+    role_id BIGSERIAL PRIMARY KEY,
+    
+    -- 役割名 (例: '一般従業員', 'チームリーダー', 'システム管理者')
+    role_name VARCHAR(50) NOT NULL UNIQUE,
+    
+    -- 権限レベル (数値。大きいほど権限が強い)
+    role_level INTEGER NOT NULL,
+    
+    -- 役割コード
+    role_code VARCHAR(20) NOT NULL UNIQUE
+);
+
+COMMENT ON TABLE role IS 'システム内の役割（ロール）マスタ';
+CREATE INDEX idx_role_level ON role (role_level);

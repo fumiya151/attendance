@@ -1,0 +1,33 @@
+CREATE TABLE employee_wage_history (
+    -- 主キー
+    id BIGSERIAL PRIMARY KEY,
+    
+    -- ★ 修正箇所: 外部キーのデータ型をVARCHAR(20)に変更
+    employee_id VARCHAR(20) NOT NULL,
+    
+    -- 時給額
+    hourly_wage NUMERIC(10, 2) NOT NULL,
+    
+    -- 適用開始日
+    effective_start_date DATE NOT NULL,
+    
+    -- 適用終了日: NULLの場合は現在適用中。
+    effective_end_date DATE NULL,
+    
+    -- 契約形態や区分
+    contract_type VARCHAR(50),
+    
+    -- 変更日時: 履歴がいつシステムに登録されたか
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+
+    -- 複合ユニークインデックス: 同じ従業員IDで適用開始日が重複しないようにする
+    UNIQUE (employee_id, effective_start_date),
+    
+    -- 外部キー制約の定義: employeeテーブルの employee_id (VARCHAR) を参照
+    CONSTRAINT fk_employee_wage
+        FOREIGN KEY (employee_id) 
+        REFERENCES employee (employee_id)
+        ON DELETE RESTRICT ON UPDATE CASCADE -- ★ 更新時の整合性維持のため追加
+);
+
+COMMENT ON TABLE employee_wage_history IS '従業員の時給履歴（昇給などに対応）';

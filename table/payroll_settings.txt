@@ -1,0 +1,44 @@
+-- テーブル名: payroll_settings
+-- 目的: 給与計算に必要な共通の料率や基準値（保険料率、割増率など）を管理する
+
+CREATE TABLE payroll_settings (
+    -- 主キー: 設定項目を一意に識別するキー（例: OVERTIME_RATE, HEALTH_INSURANCE_RATE）
+    setting_key VARCHAR(255) NOT NULL PRIMARY KEY,
+    
+    -- 設定値: 料率や金額。最大5桁の小数点（例: 0.01250, 1500.00000）
+    setting_value DECIMAL(10, 5) NOT NULL,
+    
+    -- 適用開始日: この設定が有効になる日付
+    effective_start_date DATE NOT NULL,
+    
+    -- 適用終了日: この設定が終了する日付 (NULLの場合は無期限または現在適用中)
+    effective_end_date DATE,
+    
+    -- 説明: この設定が何であるかの簡潔な説明
+    description VARCHAR(255),
+    
+    -- 制約: 適用開始日が適用終了日より前であることを保証（NULLでない場合）
+    CONSTRAINT chk_effective_dates CHECK (effective_end_date IS NULL OR effective_start_date <= effective_end_date)
+);
+
+-- インデックス: 設定キーと日付による検索を高速化
+CREATE INDEX idx_ps_key_dates ON payroll_settings (setting_key, effective_start_date, effective_end_date);
+
+
+-- ★テスト用の初期データ例（日本の給与計算に一般的に必要な項目）★
+
+INSERT INTO payroll_settings (setting_key, setting_value, effective_start_date, effective_end_date, description) VALUES
+-- 割増率 (変更なし)
+('OVERTIME_RATE', 1.25000, '2024-04-01', NULL, '時間外労働の割増率 (125%)'),
+('LATE_NIGHT_RATE', 1.25000, '2024-04-01', NULL, '深夜労働の割増率 (25% + 基礎時給)'),
+
+-- 社会保険料率 (従業員負担分)
+-- 健康保険は仮の平均値（実際は都道府県依存）
+('HEALTH_INSURANCE_RATE_EMP', 0.05000, '2025-04-01', NULL, '健康保険料率（従業員負担分）[仮の平均値]'),
+
+-- 厚生年金保険料率（全国一律 18.3% の折半 9.15%）
+('PENSION_RATE_EMP', 0.09150, '2024-04-01', NULL, '厚生年金保険料率（従業員負担分 9.15%）'),
+
+-- 雇用保険料率（2025年4月1日改定 5.5/1000）
+-- 修正前: 0.00600 -> 修正後: 0.00550
+('EMPLOYMENT_INSURANCE_RATE', 0.00550, '2025-04-01', NULL, '雇用保険料率（一般事業・従業員負担分 0.55%）');

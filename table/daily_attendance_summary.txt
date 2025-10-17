@@ -1,0 +1,61 @@
+CREATE TABLE daily_attendance_summary (
+    -- 主キー
+    id BIGSERIAL PRIMARY KEY,
+    
+    -- 外部キー: 従業員ID
+    employee_id VARCHAR(20) NOT NULL,
+    
+    -- 集計対象日
+    work_date DATE NOT NULL,
+    
+    -- 勤務実績（打刻ログから計算）
+    actual_in_time TIME,
+    actual_out_time TIME,
+    total_work_minutes INTEGER NOT NULL DEFAULT 0,
+    total_break_minutes INTEGER NOT NULL DEFAULT 0,
+    overtime_minutes INTEGER NOT NULL DEFAULT 0,
+    night_shift_minutes INTEGER NOT NULL DEFAULT 0,
+    
+    -- ステータス（未確定/確定済み/修正済みなど）
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    
+    -- 修正履歴との関連付け
+    adjustment_id BIGINT NULL,
+    
+    -- 集計された日時 (そのまま残す)
+    calculated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+
+    -- ★ 追加カラム: 監査情報
+    approved_by_id VARCHAR(20) NULL, -- 承認者ID
+    approved_at TIMESTAMP WITH TIME ZONE NULL,   -- 承認日時
+    updated_by_id VARCHAR(20) NULL,   -- 最終更新者ID (集計/修正を行った人)
+    
+    -- 制約: 同じ従業員で同じ日付の集計レコードは一つのみ
+    UNIQUE (employee_id, work_date),
+    
+    -- 外部キー制約 (employee_id)
+    CONSTRAINT fk_summary_employee
+        FOREIGN KEY (employee_id)
+        REFERENCES employee (employee_id)
+        ON DELETE RESTRICT ON UPDATE CASCADE,
+    
+    -- ★ 外部キー制約 (approved_by_id)
+    CONSTRAINT fk_summary_approved_by
+        FOREIGN KEY (approved_by_id)
+        REFERENCES employee (employee_id)
+        ON DELETE RESTRICT ON UPDATE CASCADE,
+    
+    -- ★ 外部キー制約 (updated_by_id)
+    CONSTRAINT fk_summary_updated_by
+        FOREIGN KEY (updated_by_id)
+        REFERENCES employee (employee_id)
+        ON DELETE RESTRICT ON UPDATE CASCADE
+    
+    -- 修正テーブル (attendance_adjustment) があれば、それへの外部キー
+    -- CONSTRAINT fk_summary_adjustment
+    --      FOREIGN KEY (adjustment_id)
+    --      REFERENCES attendance_adjustment (adjustment_id)
+);
+
+COMMENT ON COLUMN daily_attendance_summary.approved_by_id IS '承認操作を行った従業員ID';
+COMMENT ON COLUMN daily_attendance_summary.updated_by_id IS '最終集計または修正操作を行った従業員ID';

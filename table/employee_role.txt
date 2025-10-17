@@ -1,0 +1,31 @@
+CREATE TABLE employee_role (
+    -- 主キー
+    id BIGSERIAL PRIMARY KEY, 
+    
+    -- 従業員ID (外部キー)
+    employee_id VARCHAR(20) NOT NULL,
+    
+    -- 役割ID (外部キー)
+    role_id BIGINT NOT NULL,
+    
+    -- 割り当てられた日時
+    assigned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+
+    -- データ的な一意性を保証する制約
+    UNIQUE (employee_id, role_id),
+    
+    -- 外部キー制約 (employeeテーブルを参照)
+    CONSTRAINT fk_employee_role_employee
+        FOREIGN KEY (employee_id)
+        REFERENCES employee (employee_id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+        
+    -- 外部キー制約 (roleテーブルを参照)
+    CONSTRAINT fk_employee_role_role
+        FOREIGN KEY (role_id)
+        REFERENCES role (role_id)
+        ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+COMMENT ON TABLE employee_role IS '従業員と役割の割当情報';
+CREATE INDEX idx_employee_role_employee_id ON employee_role (employee_id);

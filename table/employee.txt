@@ -1,0 +1,16 @@
+CREATE TABLE employee (
+    employee_id VARCHAR(20) PRIMARY KEY, 
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(150) NOT NULL,
+    department VARCHAR(50),
+    hire_date DATE,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    password VARCHAR(255),
+    
+    -- ★ 追加: 作成日時と更新日時
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP, 
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP 
+);
+
+COMMENT ON COLUMN employee.created_at IS 'レコード作成日時';
+COMMENT ON COLUMN employee.updated_at IS 'レコード最終更新日時';

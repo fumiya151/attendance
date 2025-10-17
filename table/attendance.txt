@@ -1,0 +1,26 @@
+CREATE TABLE attendance (
+    -- 主キー
+    id BIGSERIAL PRIMARY KEY, 
+    
+    -- ★ 修正箇所: 外部キーのデータ型をVARCHAR(20)に変更
+    employee_id VARCHAR(20) NOT NULL, 
+    
+    -- 打刻日時: タイムゾーン情報付きで正確な日時を記録
+    stamp_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    
+    -- 打刻種別: 例 ('IN', 'OUT', 'BREAK_START', 'BREAK_END')
+    stamp_type VARCHAR(20) NOT NULL,
+    
+    -- 備考
+    note TEXT,
+    
+    -- 外部キー制約の定義: employeeテーブルの employee_id (VARCHAR) を参照
+    CONSTRAINT fk_employee_attendance
+        FOREIGN KEY (employee_id) 
+        REFERENCES employee (employee_id)
+        ON DELETE RESTRICT ON UPDATE CASCADE -- ★ 更新時の整合性維持のため追加
+);
+
+-- 検索や集計の高速化のためにインデックスを追加
+CREATE INDEX idx_attendance_employee_id ON attendance (employee_id);
+CREATE INDEX idx_attendance_stamp_time ON attendance (stamp_time);
