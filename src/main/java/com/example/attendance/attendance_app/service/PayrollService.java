@@ -5,10 +5,14 @@ import com.example.attendance.attendance_app.model.Employee;
 import com.example.attendance.attendance_app.model.EmployeeWageHistory;
 import com.example.attendance.attendance_app.model.DailyAttendanceSummary;
 import com.example.attendance.attendance_app.model.PayrollSetting;
+import com.example.attendance.attendance_app.model.EmployeeTaxInfo;
+import com.example.attendance.attendance_app.model.IncomeTaxRate;
 import com.example.attendance.attendance_app.repository.EmployeeRepository;
 import com.example.attendance.attendance_app.repository.EmployeeWageHistoryRepository;
 import com.example.attendance.attendance_app.repository.DailyAttendanceSummaryRepository;
 import com.example.attendance.attendance_app.repository.PayrollSettingRepository;
+import com.example.attendance.attendance_app.repository.EmployeeTaxInfoRepository;
+import com.example.attendance.attendance_app.repository.IncomeTaxRateRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +24,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,6 +37,8 @@ public class PayrollService {
         private final EmployeeWageHistoryRepository wageHistoryRepository;
         private final DailyAttendanceSummaryRepository summaryRepository;
         private final PayrollSettingRepository payrollSettingRepository;
+        private final EmployeeTaxInfoRepository employeeTaxInfoRepository;
+        private final IncomeTaxRateRepository incomeTaxRateRepository; // ★追加: 税額表リポジトリ★
 
         private static final double HOURS_ROUNDING_SCALE = 100.0;
         private static final double MINUTES_IN_HOUR = 60.0;
@@ -48,16 +55,13 @@ public class PayrollService {
         private static final String KEY_PENSION_RATE_EMP = "PENSION_RATE_EMP";
         private static final String KEY_EMPLOYMENT_INSURANCE_RATE = "EMPLOYMENT_INSURANCE_RATE";
 
+        // ★修正: 簡易税率ではなく、税額表を参照するため削除
+        // private static final BigDecimal SIMPLE_INCOME_TAX_RATE =
+        // BigDecimal.valueOf(0.05);
+
         /**
          * 指定期間の給与計算を実行し、結果のDTOリストを返却するメソッドです。
-         *
-         * 【機能】
-         * 期間内の確定/承認済み勤怠データに基づき、基本給、残業手当、深夜手当、および各種保険料を計算し、
-         * 拡張された PayrollDto に格納します。
-         *
-         * @param startDate 計算開始日 (期間のinclusive start date)
-         * @param endDate     計算終了日 (期間のinclusive end date)
-         * @return 計算結果のDTOリスト (List<PayrollDto>)
+         * ...
          */
         public List<PayrollDto> calculatePayroll(LocalDate startDate, LocalDate endDate) {
 
@@ -84,7 +88,15 @@ public class PayrollService {
                 for (Employee employee : employees) {
                         String employeeId = employee.getEmployeeId();
 
-                        // 1. 時給履歴テーブルから、期間開始日時点で適用される時給を取得 (BigDecimalを使用)
+                        // 1. 従業員別控除情報を取得
+                        EmployeeTaxInfo taxInfo = employeeTaxInfoRepository.findByEmployeeId(employeeId)
+                                        .orElseGet(() -> {
+                                                log.warn("従業員ID: {} の税金情報が見つかりませんでした。デフォルト値 (扶養0, 住民税0) を使用します。",
+                                                                employeeId);
+                                                return new EmployeeTaxInfo(); // デフォルト値が設定された新しいTaxInfoを返す
+                                        });
+
+                        // 2. 時給履歴テーブルから、期間開始日時点で適用される時給を取得 (BigDecimalを使用)
                         BigDecimal hourlyWage = wageHistoryRepository
                                         .findApplicableWageByEmployeeIdAndDate(employeeId, startDate)
                                         .map(EmployeeWageHistory::getHourlyWage)
@@ -98,18 +110,14 @@ public class PayrollService {
                         List<DailyAttendanceSummary> summaries = summariesByEmployee.getOrDefault(employeeId,
                                         new ArrayList<>());
 
-                        // 2. 労働時間（分）を集計
+                        // 3. 労働時間（分）を集計と丸め込み (変更なし)
                         long totalNetWorkMinutes = summaries.stream()
-                                        .mapToLong(DailyAttendanceSummary::getTotalWorkMinutes)
-                                        .sum();
+                                        .mapToLong(DailyAttendanceSummary::getTotalWorkMinutes).sum();
                         long totalOvertimeMinutes = summaries.stream()
-                                        .mapToLong(DailyAttendanceSummary::getOvertimeMinutes)
-                                        .sum();
+                                        .mapToLong(DailyAttendanceSummary::getOvertimeMinutes).sum();
                         long totalLateNightMinutes = summaries.stream()
-                                        .mapToLong(DailyAttendanceSummary::getNightShiftMinutes)
-                                        .sum();
+                                        .mapToLong(DailyAttendanceSummary::getNightShiftMinutes).sum();
 
-                        // 時間単位に変換し丸め込み
                         double totalHours = totalNetWorkMinutes / MINUTES_IN_HOUR;
                         double overtimeHours = totalOvertimeMinutes / MINUTES_IN_HOUR;
                         double lateNightHours = totalLateNightMinutes / MINUTES_IN_HOUR;
@@ -118,55 +126,61 @@ public class PayrollService {
                         double roundedOvertimeHours = roundHours(overtimeHours);
                         double roundedLateNightHours = roundHours(lateNightHours);
 
-                        // 3. 支給額の計算
+                        // 4. 支給額の計算 (基本給、各種手当)
 
-                        // 3-1. 基本給 (総労働時間 * 基本時給) - これが既存の calculatedSalary に相当
                         BigDecimal basePaySalaryBd = hourlyWage.multiply(BigDecimal.valueOf(roundedTotalHours));
 
-                        // 3-2. 残業手当 (残業時間 * 基本時給 * (割増率 - 1))
-                        // ここで計算するのは「基本時給を超過した割増分」のみ
                         BigDecimal overtimePayRate = overtimeRate.subtract(BigDecimal.ONE);
                         BigDecimal overtimePayBd = BigDecimal.valueOf(roundedOvertimeHours)
                                         .multiply(hourlyWage)
                                         .multiply(overtimePayRate)
-                                        .setScale(0, RoundingMode.HALF_UP); // 円未満四捨五入
+                                        .setScale(0, RoundingMode.HALF_UP);
 
-                        // 3-3. 深夜手当 (深夜時間 * 基本時給 * (割増率 - 1))
                         BigDecimal lateNightPayRate = lateNightRate.subtract(BigDecimal.ONE);
                         BigDecimal lateNightPayBd = BigDecimal.valueOf(roundedLateNightHours)
                                         .multiply(hourlyWage)
                                         .multiply(lateNightPayRate)
-                                        .setScale(0, RoundingMode.HALF_UP); // 円未満四捨五入
+                                        .setScale(0, RoundingMode.HALF_UP);
 
-                        // 3-4. 支給合計額 (給与総額)
                         BigDecimal totalGrossPayBd = basePaySalaryBd
                                         .add(overtimePayBd)
                                         .add(lateNightPayBd);
 
-                        // 4. 控除額の計算 (簡易版: 支給総額に料率をかける)
-                        // (通常は標準報酬月額を基に計算しますが、ここでは支給総額を代用)
+                        // 5. 控除額の計算
 
-                        // 健康保険料: 支給総額 * 健康保険料率 (端数処理: 50銭以下切り捨て)
-                        BigDecimal healthFeeBd = totalGrossPayBd
-                                        .multiply(healthRate)
-                                        .setScale(0, RoundingMode.DOWN);
+                        // 5-1. 社会保険料の計算
+                        BigDecimal healthFeeBd = totalGrossPayBd.multiply(healthRate).setScale(0, RoundingMode.DOWN);
+                        BigDecimal pensionFeeBd = totalGrossPayBd.multiply(pensionRate).setScale(0, RoundingMode.DOWN);
+                        BigDecimal employmentFeeBd = totalGrossPayBd.multiply(employmentRate).setScale(0,
+                                        RoundingMode.DOWN);
 
-                        // 厚生年金保険料: 支給総額 * 厚生年金保険料率 (端数処理: 50銭以下切り捨て)
-                        BigDecimal pensionFeeBd = totalGrossPayBd
-                                        .multiply(pensionRate)
-                                        .setScale(0, RoundingMode.DOWN);
-
-                        // 雇用保険料: 支給総額 * 雇用保険料率 (端数処理: 切り捨て)
-                        BigDecimal employmentFeeBd = totalGrossPayBd
-                                        .multiply(employmentRate)
-                                        .setScale(0, RoundingMode.DOWN);
-
-                        // 控除合計額
-                        BigDecimal totalDeductionBd = healthFeeBd
+                        BigDecimal totalSocialInsuranceFeeBd = healthFeeBd
                                         .add(pensionFeeBd)
                                         .add(employmentFeeBd);
 
-                        // 5. 差引支給額
+                        // 5-2. 所得税の計算 (★修正: 税額表の参照に切り替え★)
+
+                        // 課税対象額 (総支給額 - 社会保険料控除額)
+                        BigDecimal taxableIncomeBd = totalGrossPayBd.subtract(totalSocialInsuranceFeeBd);
+
+                        if (taxableIncomeBd.compareTo(BigDecimal.ZERO) < 0) {
+                                taxableIncomeBd = BigDecimal.ZERO;
+                        }
+
+                        // ★新規ロジック: 税額表を参照して所得税を決定 (甲欄として計算)★
+                        BigDecimal incomeTaxBd = calculateIncomeTax(startDate, taxableIncomeBd,
+                                        taxInfo.getDependentCount());
+
+                        // 5-3. 住民税の計算
+                        // 住民税: DBから取得した月額をそのまま使用
+                        BigDecimal residentTaxBd = taxInfo.getMonthlyResidentTax().setScale(0, RoundingMode.HALF_UP);
+
+                        // 5-4. 控除合計額 (社会保険 + 税金)
+                        BigDecimal totalDeductionBd = totalSocialInsuranceFeeBd
+                                        .add(incomeTaxBd)
+                                        .add(residentTaxBd);
+
+                        // 6. 差引支給額
                         BigDecimal netPayBd = totalGrossPayBd.subtract(totalDeductionBd);
 
                         // DTOに格納 (BigDecimalからDoubleに変換して格納)
@@ -176,7 +190,7 @@ public class PayrollService {
                                         roundedTotalHours,
                                         roundedOvertimeHours,
                                         roundedLateNightHours,
-                                        basePaySalaryBd.doubleValue() // basePaySalary (旧 calculatedSalary)
+                                        basePaySalaryBd.doubleValue() // basePaySalary
                         );
 
                         // 拡張項目を設定
@@ -184,9 +198,16 @@ public class PayrollService {
                         dto.setLateNightPay(lateNightPayBd.doubleValue());
                         dto.setTotalGrossPay(totalGrossPayBd.doubleValue());
 
+                        // 社会保険
                         dto.setHealthInsuranceFee(healthFeeBd.doubleValue());
                         dto.setPensionFee(pensionFeeBd.doubleValue());
                         dto.setEmploymentInsuranceFee(employmentFeeBd.doubleValue());
+
+                        // 税金
+                        dto.setIncomeTax(incomeTaxBd.doubleValue()); // 所得税
+                        dto.setResidentTax(residentTaxBd.doubleValue()); // 住民税
+
+                        // 合計と手取り
                         dto.setTotalDeduction(totalDeductionBd.doubleValue());
                         dto.setNetPay(netPayBd.doubleValue());
 
@@ -194,6 +215,46 @@ public class PayrollService {
                 }
 
                 return payrolls;
+        }
+
+        // ----------------------------------------------------
+        // ★新規追加: 所得税計算ヘルパーメソッド★
+        // ----------------------------------------------------
+        /**
+         * 所得税額表 (甲欄) を参照し、源泉徴収税額を決定します。
+         * 課税対象額と扶養人数が完全に一致するレコードがない場合、税額は0とします。
+         */
+        private BigDecimal calculateIncomeTax(LocalDate date, BigDecimal taxableIncome, int dependentCount) {
+
+                // 課税対象額がゼロ以下の場合は税額ゼロ
+                if (taxableIncome.compareTo(BigDecimal.ZERO) <= 0) {
+                        return BigDecimal.ZERO;
+                }
+
+                // 適用される税額表の行をDBから検索
+                // ここでは、給与が incomeFrom <= taxableIncome <= incomeTo の範囲にあるものを検索します。
+                List<IncomeTaxRate> applicableRates = incomeTaxRateRepository.findApplicableRates(date, taxableIncome);
+
+                // 簡易化のため、「甲欄 (KOU)」のみを対象とします。
+                Optional<IncomeTaxRate> taxRateOpt = applicableRates.stream()
+                                .filter(rate -> "KOU".equals(rate.getTaxType()))
+                                .findFirst();
+
+                if (taxRateOpt.isEmpty()) {
+                        log.warn("日付 {}、課税所得 {} に適用される所得税率 (甲欄) が見つかりませんでした。税額0とします。", date, taxableIncome);
+                        return BigDecimal.ZERO;
+                }
+
+                IncomeTaxRate rate = taxRateOpt.get();
+
+                // 扶養人数に基づいて税額を取得
+                return switch (dependentCount) {
+                        case 0 -> rate.getTax0();
+                        case 1 -> rate.getTax1();
+                        case 2 -> rate.getTax2();
+                        // 扶養人数が3人以上の場合、tax_2の税額を適用する (簡易的なフォールバック)
+                        default -> rate.getTax2();
+                };
         }
 
         // ----------------------------------------------------

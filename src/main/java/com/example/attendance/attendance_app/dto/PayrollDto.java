@@ -26,7 +26,8 @@ public class PayrollDto {
     private Double pensionFee; // 厚生年金保険料
     private Double employmentInsuranceFee; // 雇用保険料
     // ※ 所得税/住民税などは複雑なため、シンプル化のためここでは省略します。
-
+    private Double incomeTax; // 所得税
+    private Double residentTax; // 住民税
     private Double totalDeduction; // 控除合計額
     private Double netPay; // 差引支給額
 

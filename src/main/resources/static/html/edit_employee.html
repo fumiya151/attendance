@@ -77,6 +77,17 @@
                         <label for="wage">時給</label>
                         <input type="number" id="wage" name="wage" class="form-input" required>
                     </div>
+                    <div class="form-group">
+                        <label for="dependentCount">扶養人数</label>
+                        <input type="number" id="dependentCount" name="dependentCount" class="form-input" value="0" min="0" required>
+                        <small>所得税の源泉徴収額を決定するために使用されます。</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="residentTax">住民税（月額）</label>
+                        <input type="number" id="residentTax" name="residentTax" class="form-input" value="0" min="0" required>
+                        <small>市区町村からの通知書に記載された月額を登録してください。</small>
+                    </div>
                     
                     <div class="form-actions" style="margin-top: 30px;">
                         <button type="submit" class="primary-btn">確認画面へ</button>

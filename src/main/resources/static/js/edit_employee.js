@@ -1,3 +1,5 @@
+// edit_employee.js
+
 // ログイン中の従業員IDをセッションストレージから取得する関数 (共通JSファイルに存在することを前提)
 function getLoggedInEmployeeId() {
     const employeeId = sessionStorage.getItem('loggedInEmployeeId'); 
@@ -9,13 +11,13 @@ function getLoggedInEmployeeId() {
 }
 
 /**
- * JWTトークンとX-Operator-Idを取得するヘルパー関数 (★追加★)
+ * JWTトークンとX-Operator-Idを取得するヘルパー関数
  */
 function getAuthHeaders() {
     const token = sessionStorage.getItem('token');
     const employeeId = sessionStorage.getItem('loggedInEmployeeId');
     
-    // X-Operator-IdはgetLoggedInEmployeeId()で取得済みだが、JWTのチェックは必要
+    // JWTのチェック
     if (!token) {
         alert("認証セッションが無効です。再度ログインしてください。");
         window.location.href = '/html/admin_login.html'; 
@@ -33,7 +35,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const form = document.getElementById('employee-edit-form');
     const urlParams = new URLSearchParams(window.location.search);
     
-    // URLパラメータのキーを 'id' から 'employeeId' に修正済み
     const employeeId = urlParams.get('employeeId');
 
     if (!employeeId) {
@@ -47,7 +48,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 従業員データを取得してフォームに設定
     try {
-        // ★修正点: 認証ヘッダーを付与
         const res = await fetch(`/api/employees/${employeeId}`, { headers });
         
         if (!res.ok) {
@@ -59,6 +59,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         const employee = await res.json();
+        
+        // ★修正ポイント 1: APIレスポンス (EmployeeDto) から直接値を取得し、デフォルト値 (0) を設定 ★
+        const dependentCount = employee.dependentCount !== undefined && employee.dependentCount !== null ? employee.dependentCount : 0;
+        const residentTax = employee.monthlyResidentTax !== undefined && employee.monthlyResidentTax !== null ? employee.monthlyResidentTax : 0.0;
 
         // 取得した元データをセッションストレージに保存
         sessionStorage.setItem('originalEmployeeData', JSON.stringify(employee));
@@ -68,7 +72,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         form.name.value = employee.name;
         
         const roleSelect = form.roleSelect;
+        // roleSelect.options は事前にAPIなどで取得・HTMLに設定されている前提
         const options = Array.from(roleSelect.options);
+        
+        // DTOの 'department' フィールドに、ロール名や部署名が入っていると仮定して選択
         const optionToSelect = options.find(option => option.dataset.department === employee.department);
         if (optionToSelect) {
             optionToSelect.selected = true;
@@ -77,7 +84,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         form.email.value = employee.email || '';
         form.wage.value = employee.wage || '';
         
-        // form.querySelector(`input[name="isActive"][value="${String(employee.active)}"]`).checked = true;
+        // ★追加: 税務情報をフォームに設定（要素が存在することを前提）★
+        const dependentCountInput = document.getElementById('dependentCount');
+        const residentTaxInput = document.getElementById('residentTax');
+
+        if (dependentCountInput) dependentCountInput.value = dependentCount;
+        if (residentTaxInput) residentTaxInput.value = residentTax; // residentTaxはDoubleなのでそのまま
 
     } catch (error) {
         alert(error.message);
@@ -91,17 +103,26 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const selectedOption = form.roleSelect.options[form.roleSelect.selectedIndex];
         
-        // 編集後のデータをオブジェクトとしてまとめる
+        // ★修正ポイント 2: 編集後のデータに税務情報を追加し、値を正しく処理★
+        const dependentCountInput = document.getElementById('dependentCount');
+        const residentTaxInput = document.getElementById('residentTax');
+
+        // 数値変換のためのヘルパー関数
+        const getIntValue = (element) => element && element.value ? parseInt(element.value) || 0 : 0;
+        const getFloatValue = (element) => element && element.value ? parseFloat(element.value) || 0.0 : 0.0;
+
         const editedEmployeeData = {
-            // Note: editedData.id は不要だが、前のロジックを踏襲して employeeId を使用
-            employeeId: employeeId, // employeeIdを正しく設定
+            employeeId: employeeId,
             name: form.name.value,
-            department: selectedOption.dataset.department,
+            department: selectedOption.dataset.department, // 役職/部署名
             email: form.email.value,
-            wage: form.wage.value,
-            // ★ 修正: 在職状況（isActive）のロジックを削除し、DBに依存（true）させる
+            wage: form.wage.value, // 時給は文字列として扱う (バックエンドでBigDecimalに変換)
             active: true, 
-            roleId: form.roleSelect.value
+            roleId: form.roleSelect.value, // 役割ID
+            
+            // ★追加: 税務情報 - DTOの型に合わせて数値に変換★
+            dependentCount: getIntValue(dependentCountInput),
+            monthlyResidentTax: getFloatValue(residentTaxInput),
         };
 
         // セッションストレージに保存

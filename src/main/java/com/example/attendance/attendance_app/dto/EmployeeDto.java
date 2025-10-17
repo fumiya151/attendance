@@ -11,4 +11,6 @@ public class EmployeeDto {
     private boolean active;
     private Long roleId;
     private String wage;
+    private Integer dependentCount; // 扶養人数（所得税計算用）
+    private Double monthlyResidentTax; // 住民税月額（特別徴収）
 }
