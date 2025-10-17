@@ -244,7 +244,7 @@ function applyFiltersAndRenderTable(summaries) {
             const summaryId = event.currentTarget.dataset.id;
             if (summaryId) {
                 // 修正画面（edit_attendance.html）にIDを渡して遷移
-                window.location.href = `/html/edit_attendance.html?summaryId=${summaryId}`;
+                window.location.href = `/html/emp_edit_attendance.html?summaryId=${summaryId}`;
             }
         });
     });
