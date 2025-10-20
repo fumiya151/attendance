@@ -95,8 +95,6 @@ public class DailyAttendanceSummary {
     @Column(name = "calculated_at")
     private OffsetDateTime calculatedAt;
 
-    // --- ★ 追加: 監査フィールド ---
-
     /**
      * 承認操作を行った従業員ID (fk_summary_approved_by)
      */
@@ -114,8 +112,6 @@ public class DailyAttendanceSummary {
      */
     @Column(name = "updated_by_id", length = 20)
     private String updatedById;
-
-    // --- ★ 追加: 自動更新ロジック (JPAライフサイクル) ---
 
     @PrePersist
     protected void onCreate() {

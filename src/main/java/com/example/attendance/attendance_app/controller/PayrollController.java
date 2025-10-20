@@ -2,12 +2,12 @@ package com.example.attendance.attendance_app.controller;
 
 import com.example.attendance.attendance_app.dto.PayrollDto;
 import com.example.attendance.attendance_app.service.PayrollService;
-import lombok.RequiredArgsConstructor; // コンストラクタインジェクションのために追加
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.format.annotation.DateTimeFormat; // 日付フォーマットのために追加
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam; // クエリパラメータのために追加
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
@@ -15,10 +15,8 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/payroll")
-@RequiredArgsConstructor // コンストラクタインジェクションのため
+@RequiredArgsConstructor
 public class PayrollController {
-
-    // フィールドインジェクション(@Autowired)を削除し、finalで宣言
     private final PayrollService payrollService;
 
     /**

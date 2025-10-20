@@ -13,9 +13,16 @@ public interface PayrollSettingRepository extends JpaRepository<PayrollSetting, 
 
     /**
      * 指定されたキーと日付に基づいて、現在適用されている設定値を取得します。
-     * * @param settingKey 取得する設定のキー
-     * 
-     * @param date 確認日 (通常は計算期間の開始日)
+     *
+     * 【機能】
+     * settingKeyが一致し、かつ指定された日付（date）が有効期間内（effectiveStartDate以下 かつ
+     * (effectiveEndDateがNULLまたはeffectiveEndDate以上)）にある、最新の設定レコードを検索します。
+     *
+     * 【注意事項】
+     * 有効期間が重複する場合、effectiveStartDateが最も新しいレコード（最新の改定）が返されます。JPQLのLIMIT句を使用しています。
+     *
+     * @param settingKey 取得する設定のキー
+     * @param date       確認日（通常は計算期間の開始日）
      * @return 適用されている設定値を持つ Optional<PayrollSetting>
      */
     @Query("SELECT ps FROM PayrollSetting ps WHERE ps.settingKey = :settingKey " +

@@ -6,6 +6,13 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import java.time.OffsetDateTime;
 
+/**
+ * 従業員に割り当てられた役割（ロール）の関連付けを保持するエンティティです。
+ *
+ * 【用途】
+ * どの従業員がどのシステム権限（Role）を持っているかを定義します。
+ * employee_id と role_id の組み合わせは一意です（一人の従業員に同じロールを二重に割り当てない）。
+ */
 @Entity
 @Table(name = "employee_role", uniqueConstraints = {
         @UniqueConstraint(columnNames = { "employee_id", "role_id" })
@@ -15,32 +22,50 @@ import java.time.OffsetDateTime;
 @AllArgsConstructor
 public class EmployeeRole {
 
-    // Primary Key: BIGSERIAL (Database auto-generated)
+    /**
+     * 主キー（自動採番）。
+     */
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY) // 自動採番戦略
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // 従業員ID (割り当て対象)
+    /**
+     * 従業員ID（割り当て対象）。
+     */
     @Column(name = "employee_id", length = 20, nullable = false)
     private String employeeId;
 
-    // 役割ID (外部キー)
+    /**
+     * 役割エンティティへの参照（外部キー）。
+     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
 
-    // 割り当て日時（作成日時）
+    /**
+     * 役割が割り当てられた日時（作成日時）。
+     */
     @Column(name = "assigned_at")
     private OffsetDateTime assignedAt;
 
-    // ★ 追加点: 最終更新日時
+    /**
+     * レコード最終更新日時。
+     */
     @Column(name = "updated_at")
     private OffsetDateTime updatedAt;
 
-    // ★ 追加点: 最終更新を行った従業員のID
+    /**
+     * レコード最終更新を行った従業員のID。
+     */
     @Column(name = "updated_by_employee_id", length = 20)
     private String updatedByEmployeeId;
 
+    /**
+     * エンティティが永続化される直前に実行されるコールバックメソッド。
+     *
+     * 【機能】
+     * `assignedAt` と `updatedAt` を現在時刻（タイムゾーン情報付き）で初期設定します。
+     */
     @PrePersist // 挿入前
     protected void onCreate() {
         if (this.assignedAt == null) {
@@ -51,6 +76,12 @@ public class EmployeeRole {
         // NOTE: updatedByEmployeeId (作成者ID) はService層でセットされる必要があります。
     }
 
+    /**
+     * エンティティが更新される直前に実行されるコールバックメソッド。
+     *
+     * 【機能】
+     * `updatedAt` を現在時刻（タイムゾーン情報付き）に更新します。
+     */
     @PreUpdate // 更新前
     protected void onUpdate() {
         // 更新日時を現在時刻に設定
