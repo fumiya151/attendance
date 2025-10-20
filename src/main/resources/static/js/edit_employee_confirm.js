@@ -59,8 +59,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // 変更点を比較してテーブルを生成
     fields.forEach(field => {
         
-        // ★★★ 修正箇所: 比較と表示のロジックを安全かつ正確に ★★★
-        
         // 1. 値の取得と標準化 (null/undefined -> 0 or '')
         // rawValue: セッションストレージから取得した生の値 (null, "1000", 0 など)
         const rawOriginalValue = originalData[field.key];

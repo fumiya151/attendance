@@ -24,9 +24,6 @@ CREATE TABLE payroll_settings (
 -- インデックス: 設定キーと日付による検索を高速化
 CREATE INDEX idx_ps_key_dates ON payroll_settings (setting_key, effective_start_date, effective_end_date);
 
-
--- ★テスト用の初期データ例（日本の給与計算に一般的に必要な項目）★
-
 INSERT INTO payroll_settings (setting_key, setting_value, effective_start_date, effective_end_date, description) VALUES
 -- 割増率 (変更なし)
 ('OVERTIME_RATE', 1.25000, '2024-04-01', NULL, '時間外労働の割増率 (125%)'),

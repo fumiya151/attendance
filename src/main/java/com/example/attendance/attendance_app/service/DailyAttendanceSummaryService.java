@@ -141,7 +141,6 @@ public class DailyAttendanceSummaryService {
                     inLog.setStampTime(
                             workDate.atTime(requestDto.getActualInTime()).atZone(JST_ZONE)
                                     .toOffsetDateTime());
-                    // inLog.setUpdatedById(operatorId); // ★修正点: 該当メソッドが存在しないため削除★
                     attendanceRepository.save(inLog);
                 });
 
@@ -152,7 +151,6 @@ public class DailyAttendanceSummaryService {
                     outLog.setStampTime(
                             workDate.atTime(requestDto.getActualOutTime()).atZone(JST_ZONE)
                                     .toOffsetDateTime());
-                    // outLog.setUpdatedById(operatorId); // ★修正点: 該当メソッドが存在しないため削除★
                     attendanceRepository.save(outLog);
                 });
     }
@@ -397,8 +395,6 @@ public class DailyAttendanceSummaryService {
         List<DailyAttendanceSummary> updatedSummaries = summariesToApprove.stream()
                 // PENDING状態のものに絞る
                 .filter(summary -> STATUS_PENDING.equals(summary.getStatus()))
-
-                // ★ 修正された期間チェックロジック（単体承認時は日付チェックを無視） ★
                 .filter(summary -> skipDateCheck ||
                         (!summary.getWorkDate().isBefore(startDate)
                                 && !summary.getWorkDate().isAfter(endDate)))

@@ -87,9 +87,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
                 SecurityContextHolder.getContext().setAuthentication(authToken);
 
-                System.out.println("★DEBUG: JWT認証成功! ユーザー: " + employeeId + ", ロール: " + userDetails.getAuthorities());
+                System.out.println("DEBUG: JWT認証成功! ユーザー: " + employeeId + ", ロール: " + userDetails.getAuthorities());
             } else {
-                System.out.println("★DEBUG: JWTトークンが無効です。ユーザー: " + employeeId);
+                System.out.println("DEBUG: JWTトークンが無効です。ユーザー: " + employeeId);
             }
         }
 

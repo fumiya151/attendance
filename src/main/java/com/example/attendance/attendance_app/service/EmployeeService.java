@@ -145,8 +145,6 @@ public class EmployeeService {
         Employee savedEmployee = employeeRepository.save(employee);
 
         assignDefaultRole(savedEmployee, request.getRoleId(), operatorId);
-
-        // ★修正: 新規登録時は、TaxInfo を直接 INSERT するロジックを使用★
         EmployeeTaxInfo defaultTaxInfo = new EmployeeTaxInfo();
         defaultTaxInfo.setEmployeeId(savedEmployee.getEmployeeId());
         defaultTaxInfo.setDependentCount(0); // 扶養人数0をデフォルト
@@ -253,7 +251,6 @@ public class EmployeeService {
             }
         }
 
-        // ★追加: 税務情報の更新ロジック★
         if (dto.getDependentCount() != null || dto.getMonthlyResidentTax() != null) {
             // DTOから扶養人数と住民税額を取得
             int dependentCount = dto.getDependentCount() != null ? dto.getDependentCount() : 0;

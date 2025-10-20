@@ -52,8 +52,6 @@ public class PayrollPdfService {
 
     private static final NumberFormat CURRENCY_FORMAT = NumberFormat.getCurrencyInstance(Locale.JAPAN);
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy/MM/dd");
-
-    // ★修正: 支給・控除用のヘッダーを定義★
     private static final String[] ITEM_HEADERS = { "項目", "時間/回数", "単価/料率", "金額" };
     private static final float[] ITEM_COLUMN_WIDTHS = { 4f, 2f, 2f, 3f };
 
@@ -120,7 +118,8 @@ public class PayrollPdfService {
                 String baseRateDisplay;
                 if (totalHours > 0) {
                     double hourlyRate = basePaySalary / totalHours;
-                    String roundedRateString = String.format(Locale.US, FORMAT_CURRENCY_DECIMAL, hourlyRate);
+                    String roundedRateString = String.format(Locale.US, FORMAT_CURRENCY_DECIMAL,
+                            hourlyRate);
                     baseRateDisplay = CURRENCY_FORMAT.format(Double.parseDouble(roundedRateString));
                 } else {
                     baseRateDisplay = "-";
@@ -134,12 +133,14 @@ public class PayrollPdfService {
 
                 document.add(
                         new Paragraph(
-                                "集計期間: " + startDate.format(DATE_FORMATTER) + " 〜 " + endDate.format(DATE_FORMATTER))
+                                "集計期間: " + startDate.format(DATE_FORMATTER) + " 〜 "
+                                        + endDate.format(DATE_FORMATTER))
                                 .setFontSize(FONT_SIZE_BASE)
                                 .setTextAlignment(TextAlignment.CENTER));
 
                 document.add(
-                        new Paragraph("氏名: " + payroll.getEmployeeName() + " (ID: " + payroll.getEmployeeId() + ")")
+                        new Paragraph("氏名: " + payroll.getEmployeeName() + " (ID: "
+                                + payroll.getEmployeeId() + ")")
                                 .setFontSize(FONT_SIZE_HEADER)
                                 .setBold()
                                 .setMarginTop(10)
@@ -158,14 +159,12 @@ public class PayrollPdfService {
                         CURRENCY_FORMAT.format(basePaySalary));
 
                 // 2. 時間外手当
-                // ★修正: if文を削除して常に表示★
                 addItemRow(payTable, "時間外手当",
                         String.format(Locale.US, "%.2f 時間", payroll.getOvertimeHours()),
                         "割増分",
                         CURRENCY_FORMAT.format(payroll.getOvertimePay()));
 
                 // 3. 深夜手当
-                // ★修正: if文を削除して常に表示★
                 addItemRow(payTable, "深夜手当",
                         String.format(Locale.US, "%.2f 時間", payroll.getLateNightHours()),
                         "割増分",
@@ -184,35 +183,30 @@ public class PayrollPdfService {
                 Table deductionTable = createItemTable(japaneseFont);
 
                 // 1. 健康保険料
-                // ★修正: if文を削除して常に表示★
                 addItemRow(deductionTable, "健康保険料",
                         "-", // 時間/回数
                         "料率",
                         CURRENCY_FORMAT.format(payroll.getHealthInsuranceFee()));
 
                 // 2. 厚生年金保険料
-                // ★修正: if文を削除して常に表示★
                 addItemRow(deductionTable, "厚生年金保険料",
                         "-",
                         "料率",
                         CURRENCY_FORMAT.format(payroll.getPensionFee()));
 
                 // 3. 雇用保険料
-                // ★修正: if文を削除して常に表示★
                 addItemRow(deductionTable, "雇用保険料",
                         "-",
                         "料率",
                         CURRENCY_FORMAT.format(payroll.getEmploymentInsuranceFee()));
 
                 // 4. 所得税 (新規追加)
-                // ★修正: if文を削除して常に表示★
                 addItemRow(deductionTable, "所得税",
                         "-",
                         "税額表参照", // 簡易税率ではなく税額表参照を明記
                         CURRENCY_FORMAT.format(payroll.getIncomeTax()));
 
                 // 5. 住民税 (新規追加)
-                // ★修正: if文を削除して常に表示★
                 addItemRow(deductionTable, "住民税",
                         "-",
                         "特別徴収",

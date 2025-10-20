@@ -24,7 +24,6 @@ function getLoggedInUserRole() {
 // --- JWTトークン取得ヘルパー ---
 function getAuthHeaders() {
     const token = sessionStorage.getItem('token');
-    // ★修正点: getElementByIdはHTML要素の取得メソッド。sessionStorageからの取得は getItem を使う。
     const employeeId = sessionStorage.getItem('loggedInEmployeeId'); 
 
     if (!token || !employeeId) {
@@ -35,7 +34,7 @@ function getAuthHeaders() {
     }
     return {
         'Authorization': `Bearer ${token}`,
-        'X-Operator-Id': employeeId // ★修正なし: 監査・認可のためにIDも常に付与
+        'X-Operator-Id': employeeId
     };
 }
 
@@ -87,8 +86,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 
                 // employeeId を使って、ユーザー名を DOM から取得する代わりに取得することを推奨
                 const employeeName = userInfoSpan ? userInfoSpan.textContent.split(' ')[1].replace(/[()]/g, '') : employeeId;
-
-                // ★修正点: ダミーの alert を削除し、exportToPdf 関数を呼び出す★
                 exportToPdf(employeeId, selectedMonth, employeeName); 
             });
         }
@@ -109,7 +106,6 @@ async function fetchAndDisplaySummaries(employeeId) {
     if (!headers['Authorization']) return;
 
     try {
-        // ★修正点: APIパスを /api/summaries/emplimitsummaries に修正
         // EMPユーザーのIDをクエリパラメータとしてAPIに渡し、自身のデータのみを要求する
         const response = await fetch(`/api/summaries/emplimitsummaries?employeeId=${employeeId}`, { headers }); 
         
@@ -236,9 +232,6 @@ function applyFiltersAndRenderTable(summaries) {
         tableBody.appendChild(row);
     });
 
-    // -----------------------------------------------------------------
-    // ★★★ 修正機能の実装: edit-btn クリック時のイベントリスナー設定 ★★★
-    // -----------------------------------------------------------------
     document.querySelectorAll('#attendance-logs .edit-btn').forEach(button => {
         button.addEventListener('click', (event) => {
             const summaryId = event.currentTarget.dataset.id;

@@ -20,7 +20,7 @@ function getLoggedInEmployeeId() {
 }
 
 /**
- * JWTトークンとX-Operator-Idを取得するヘルパー関数 (★追加★)
+ * JWTトークンとX-Operator-Idを取得するヘルパー関数
  */
 function getAuthHeaders() {
     const token = sessionStorage.getItem('token');
@@ -93,7 +93,6 @@ form.addEventListener('submit', async (e) => {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
-                // ★修正点: 認証ヘッダーと監査ヘッダーをまとめて付与
                 ...headers 
             },
             body: JSON.stringify(data)

@@ -7,7 +7,7 @@ CREATE TABLE employee (
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     password VARCHAR(255),
     
-    -- ★ 追加: 作成日時と更新日時
+    -- 作成日時と更新日時
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP, 
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP 
 );

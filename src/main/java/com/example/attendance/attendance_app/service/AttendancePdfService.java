@@ -71,7 +71,7 @@ public class AttendancePdfService {
             "日付", "曜日", "出勤時刻", "退勤時刻", "休憩(" + UNIT_MINUTES + ")", "実働時間", "残業時間", "備考/承認"
     };
     private static final float[] COLUMN_WIDTHS = { 1.5f, 1f, 2f, 2f, 1.5f, 2f, 2f, 2.5f };
-    private static final int COLSPAN_TOTAL_SUMMARY = 5; // ★追加定数：集計行の結合数★
+    private static final int COLSPAN_TOTAL_SUMMARY = 5;
 
     /**
      * 勤怠サマリーリストから月次勤務表形式のPDFファイルを生成します。

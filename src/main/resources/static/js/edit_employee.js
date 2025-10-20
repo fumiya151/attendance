@@ -59,8 +59,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         const employee = await res.json();
-        
-        // ★修正ポイント 1: APIレスポンス (EmployeeDto) から直接値を取得し、デフォルト値 (0) を設定 ★
         const dependentCount = employee.dependentCount !== undefined && employee.dependentCount !== null ? employee.dependentCount : 0;
         const residentTax = employee.monthlyResidentTax !== undefined && employee.monthlyResidentTax !== null ? employee.monthlyResidentTax : 0.0;
 
@@ -84,7 +82,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         form.email.value = employee.email || '';
         form.wage.value = employee.wage || '';
         
-        // ★追加: 税務情報をフォームに設定（要素が存在することを前提）★
         const dependentCountInput = document.getElementById('dependentCount');
         const residentTaxInput = document.getElementById('residentTax');
 
@@ -102,8 +99,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         e.preventDefault();
 
         const selectedOption = form.roleSelect.options[form.roleSelect.selectedIndex];
-        
-        // ★修正ポイント 2: 編集後のデータに税務情報を追加し、値を正しく処理★
         const dependentCountInput = document.getElementById('dependentCount');
         const residentTaxInput = document.getElementById('residentTax');
 
@@ -120,7 +115,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             active: true, 
             roleId: form.roleSelect.value, // 役割ID
             
-            // ★追加: 税務情報 - DTOの型に合わせて数値に変換★
             dependentCount: getIntValue(dependentCountInput),
             monthlyResidentTax: getFloatValue(residentTaxInput),
         };

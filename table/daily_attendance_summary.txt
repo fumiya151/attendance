@@ -25,7 +25,7 @@ CREATE TABLE daily_attendance_summary (
     -- 集計された日時 (そのまま残す)
     calculated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 
-    -- ★ 追加カラム: 監査情報
+    -- 監査情報
     approved_by_id VARCHAR(20) NULL, -- 承認者ID
     approved_at TIMESTAMP WITH TIME ZONE NULL,   -- 承認日時
     updated_by_id VARCHAR(20) NULL,   -- 最終更新者ID (集計/修正を行った人)
@@ -39,13 +39,13 @@ CREATE TABLE daily_attendance_summary (
         REFERENCES employee (employee_id)
         ON DELETE RESTRICT ON UPDATE CASCADE,
     
-    -- ★ 外部キー制約 (approved_by_id)
+    --  外部キー制約 (approved_by_id)
     CONSTRAINT fk_summary_approved_by
         FOREIGN KEY (approved_by_id)
         REFERENCES employee (employee_id)
         ON DELETE RESTRICT ON UPDATE CASCADE,
     
-    -- ★ 外部キー制約 (updated_by_id)
+    --  外部キー制約 (updated_by_id)
     CONSTRAINT fk_summary_updated_by
         FOREIGN KEY (updated_by_id)
         REFERENCES employee (employee_id)

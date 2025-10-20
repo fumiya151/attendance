@@ -32,7 +32,6 @@ loginForm.addEventListener('submit', async (e) => {
                 throw new Error('ログイン成功しましたが、必要な情報（ID、ロール、またはトークン）が返されませんでした。');
             }
 
-            // ★修正点: ロール制限ロジックを ADMIN/MGR のみに変更
             if (actualRole === 'ADMIN' || actualRole === 'MGR') {
                 
                 // ログイン情報をセッションに保存

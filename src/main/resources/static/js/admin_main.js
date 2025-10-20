@@ -461,9 +461,6 @@ function applyFiltersAndRenderTable(summaries) {
         tableBody.appendChild(row);
     });
 
-    // -----------------------------------------------------------------
-    // ★★★ 修正機能の実装: edit-btn クリック時のイベントリスナー設定 ★★★
-    // -----------------------------------------------------------------
     document.querySelectorAll('#attendance-logs .edit-btn').forEach(button => {
         button.addEventListener('click', (event) => {
             const summaryId = event.currentTarget.dataset.id;

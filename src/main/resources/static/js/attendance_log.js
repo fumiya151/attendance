@@ -18,7 +18,6 @@ function getEmployeeIdFromName(employeeName) {
     return summary ? summary.employeeId : null;
 }
 
-// --- JWTトークンとオペレーターIDを取得するヘルパー関数 (★追加★) ---
 function getAuthHeaders() {
     const token = sessionStorage.getItem('token');
     const employeeId = sessionStorage.getItem('loggedInEmployeeId');
@@ -92,12 +91,12 @@ document.addEventListener('DOMContentLoaded', function () {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        ...getAuthHeaders() // ★修正点: 認証ヘッダーを付与
+                        ...getAuthHeaders()
                     },
                     body: JSON.stringify({ 
                         summaryIds: pendingIds, 
                         startDate: startDate, 
-                        endDate: endDate      
+                        endDate: endDate 
                     }) 
                 });
 
@@ -125,8 +124,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const pdfExportBtn = document.getElementById('csv-export-btn'); // IDは元のまま使用
     if (pdfExportBtn) {
         pdfExportBtn.addEventListener('click', () => {
-            
-            // ★ バックエンドAPIに合わせたデータチェック ★
             const selectedMonth = document.getElementById('search-month').value;
             const selectedEmployeeName = document.getElementById('search-employee').value;
 
@@ -155,7 +152,6 @@ async function fetchAndDisplaySummaries() {
     if (!headers['Authorization']) return; // トークンがない場合は処理を中断
 
     try {
-        // ★修正点: 認証ヘッダーを付与
         const response = await fetch('/api/summaries', { headers }); 
         
         if (!response.ok) {
@@ -307,7 +303,7 @@ function applyFiltersAndRenderTable(summaries) {
         const actions = approvalStatus === 'PENDING' ? 
             `<button class="small-btn edit-btn" data-id="${sum.id}"><i class="fas fa-pen"></i> 修正</button>
              <button class="small-btn primary-btn approve-single-btn" data-id="${sum.id}">承認</button>` :
-            `<button class="small-btn edit-btn" data-id="${sum.id}"><i class="fas fa-pen"></i> 修正</button>`; // ★承認済でも修正ボタンが表示されるロジック
+            `<button class="small-btn edit-btn" data-id="${sum.id}"><i class="fas fa-pen"></i> 修正</button>`;
 
         // 8列の描画ロジックと整形適用 (実働時間を追加)
         row.innerHTML = `
@@ -323,9 +319,6 @@ function applyFiltersAndRenderTable(summaries) {
         tableBody.appendChild(row);
     });
 
-    // -----------------------------------------------------------------
-    // ★★★ 修正機能の実装: edit-btn クリック時のイベントリスナー設定 ★★★
-    // -----------------------------------------------------------------
     document.querySelectorAll('.edit-btn').forEach(button => {
         button.addEventListener('click', (event) => {
             const summaryId = event.currentTarget.dataset.id;
@@ -347,7 +340,6 @@ function applyFiltersAndRenderTable(summaries) {
             let startDate = document.getElementById('approval-start-date')?.value;
             let endDate = document.getElementById('approval-end-date')?.value;
             
-            // ★ 修正: 期間入力が空の場合、本日をデフォルトとして使用 ★
             if (!startDate || !endDate) {
                 const today = new Date().toISOString().substring(0, 10); // YYYY-MM-DD 形式
                 startDate = today;
@@ -370,7 +362,7 @@ function applyFiltersAndRenderTable(summaries) {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        ...getAuthHeaders() // ★修正点: 認証ヘッダーを付与
+                        ...getAuthHeaders()
                     },
                     body: JSON.stringify({ 
                         summaryIds: [parseInt(summaryId, 10)], // 1件のIDリスト
@@ -421,7 +413,6 @@ async function exportToPdf(employeeId, yearMonthStr, employeeName) {
     try {
         // バックエンドAPIの呼び出し
         const url = `/api/exports/pdf/summaries?employeeId=${employeeId}&yearMonth=${yearMonthStr}`;
-        // ★修正点: 認証ヘッダーを付与
         const response = await fetch(url, {
             method: 'GET',
             headers: headers

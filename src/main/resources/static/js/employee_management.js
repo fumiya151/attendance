@@ -13,9 +13,6 @@ function getLoggedInEmployeeId() {
     return employeeId;
 }
 
-/**
- * JWTトークンとX-Operator-Idを取得するヘルパー関数 (★追加★)
- */
 function getAuthHeaders() {
     const token = sessionStorage.getItem('token');
     const employeeId = sessionStorage.getItem('loggedInEmployeeId');
@@ -41,7 +38,6 @@ async function fetchAndRenderEmployees() {
     if (!headers['Authorization']) return;
 
     try {
-        // ★修正点: 認証ヘッダーを付与
         const res = await fetch('/api/employees', { headers });
         
         if (!res.ok) {
@@ -86,7 +82,6 @@ function renderEmployeeRows(list) {
         
         // 編集ボタンのイベントリスナー
         tr.querySelector('.edit-btn').addEventListener('click', () => {
-            // ★修正点: パスを統一
             window.location.href = `/html/edit_employee.html?employeeId=${emp.employeeId}`;
         });
         
@@ -106,7 +101,6 @@ function renderEmployeeRows(list) {
                     // DELETE /api/employees/{id} の呼び出し
                     const res = await fetch(`/api/employees/${employeeId}`, {
                         method: 'DELETE', 
-                        // ★修正点: 認証ヘッダーを付与 (X-Operator-IdはgetAuthHeadersに含まれる)
                         headers: headers
                     });
                     
@@ -175,7 +169,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!headers['Authorization']) return;
             
             try {
-                // ★修正点: 認証ヘッダーを付与
                 const res = await fetch(`/api/employees?keyword=${encodeURIComponent(keyword)}`, { headers });
                 
                 if (!res.ok) {
@@ -203,7 +196,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (executeAggregationBtn && periodSelect) {
         executeAggregationBtn.addEventListener('click', () => {
             const selectedPeriod = periodSelect.value;
-            // ★修正点: パスを統一
             window.location.href = `/html/payroll_calculation.html?period=${encodeURIComponent(selectedPeriod)}`;
         });
     }
@@ -252,7 +244,6 @@ if(form) {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
-                    // ★修正点: 認証ヘッダーを付与 (X-Operator-IdはgetAuthHeadersに含まれる)
                     ...headers 
                 },
                 body: JSON.stringify(data)

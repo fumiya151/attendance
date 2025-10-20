@@ -30,8 +30,6 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with employeeId: " + username));
 
         List<EmployeeRole> employeeRoles = employeeRoleRepository.findByEmployeeId(employee.getEmployeeId());
-
-        // ★修正点: ロールコードに "ROLE_" プレフィックスを追加
         List<SimpleGrantedAuthority> authorities = employeeRoles.stream()
                 .map(role -> new SimpleGrantedAuthority("ROLE_" + role.getRole().getRoleCode()))
                 .collect(Collectors.toList());

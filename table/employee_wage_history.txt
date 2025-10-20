@@ -2,7 +2,7 @@ CREATE TABLE employee_wage_history (
     -- 主キー
     id BIGSERIAL PRIMARY KEY,
     
-    -- ★ 修正箇所: 外部キーのデータ型をVARCHAR(20)に変更
+    -- 外部キーのデータ型をVARCHAR(20)に変更
     employee_id VARCHAR(20) NOT NULL,
     
     -- 時給額
@@ -27,7 +27,7 @@ CREATE TABLE employee_wage_history (
     CONSTRAINT fk_employee_wage
         FOREIGN KEY (employee_id) 
         REFERENCES employee (employee_id)
-        ON DELETE RESTRICT ON UPDATE CASCADE -- ★ 更新時の整合性維持のため追加
+        ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 COMMENT ON TABLE employee_wage_history IS '従業員の時給履歴（昇給などに対応）';

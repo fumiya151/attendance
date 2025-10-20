@@ -31,7 +31,6 @@ function getAuthHeaders() {
 
 document.addEventListener('DOMContentLoaded', function () {
     const calculateBtn = document.getElementById('calculate-btn');
-    // ★修正: IDを export-all-pdf-btn に変更★
     const exportAllPdfBtn = document.getElementById('export-all-pdf-btn'); 
     const tableBody = document.getElementById('payroll-table-body');
 
@@ -66,7 +65,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const headers = getAuthHeaders();
         if (!headers['Authorization']) {
-            // ★colspanを5に修正★
             tableBody.innerHTML = '<tr><td colspan="5" style="color: red;">❌ エラー: 認証情報がありません。ログインし直してください。</td></tr>';
             return;
         }
@@ -90,7 +88,6 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(data => {
                 tableBody.innerHTML = '';
                 if (data.length === 0) {
-                    // ★colspanを5に修正★
                     tableBody.innerHTML = '<tr><td colspan="5">給与計算対象の従業員が見つかりません。期間内の**確定済み勤怠**または**有効な時給設定**を確認してください。</td></tr>';
                     return;
                 }
@@ -114,7 +111,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     tableBody.appendChild(row);
                 });
                 
-                // ★追加: 明細出力ボタンにイベントリスナーを設定★
                 document.querySelectorAll('.export-single-pdf-btn').forEach(button => {
                     button.addEventListener('click', (event) => {
                         const employeeId = event.target.dataset.employeeId;
@@ -136,19 +132,17 @@ document.addEventListener('DOMContentLoaded', function () {
                 const userMessage = error.message.includes("Required parameter 'startDate'") ?
                     "期間が正しく選択されていません。" :
                     error.message;
-                // ★colspanを5に修正★
                 tableBody.innerHTML = `<tr><td colspan="5" style="color: red;">❌ エラー: ${userMessage}</td></tr>`;
             });
     }
     
     // ------------------------------------------
-    // 個別給与明細PDFダウンロード関数 (★新規追加★)
+    // 個別給与明細PDFダウンロード関数
     // ------------------------------------------
     /**
      * 指定した従業員の給与明細PDFをダウンロードする関数
      */
     function downloadSinglePayrollPdf(employeeId, startDateStr, endDateStr) { 
-        // ★修正: APIにemployeeIdを渡すように修正 (バックエンドの /payroll/single パスを使用)★
         const url = `/api/exports/pdf/payroll/single?employeeId=${employeeId}&startDate=${startDateStr}&endDate=${endDateStr}`;
         const headers = getAuthHeaders();
         
@@ -156,7 +150,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // ------------------------------------------
-    // 全従業員給与明細PDFダウンロード関数 (★新規追加★)
+    // 全従業員給与明細PDFダウンロード関数
     // ------------------------------------------
     /**
      * 全従業員分の給与明細PDFをダウンロードする関数
@@ -170,7 +164,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // ------------------------------------------
-    // PDFダウンロード共通処理 (★新規追加★)
+    // PDFダウンロード共通処理
     // ------------------------------------------
     function downloadPdfFromApi(url, headers, alertBaseName) {
         fetch(url, { headers })
@@ -213,7 +207,6 @@ document.addEventListener('DOMContentLoaded', function () {
     // ページロード時の判定ロジック (URLパラメータ処理)
     // ------------------------------------------
     if (period) {
-        // ★ 1. URLパラメータで期間が渡された場合、自動で集計を開始
         const dates = convertPeriodToDates(period);
 
         if (dates) {
@@ -230,7 +223,6 @@ document.addEventListener('DOMContentLoaded', function () {
        // URLパラメータがない場合、計算ボタンクリックを待つ
        tableBody.innerHTML = '<tr><td colspan="5">集計期間を選択し、「給与計算を実行」ボタンを押してください。</td></tr>'; 
        
-        // ★ 期間が未設定の場合、入力フィールドに今月の日付を初期設定する
         const today = new Date();
         const firstDay = new Date(Date.UTC(today.getFullYear(), today.getMonth(), 1)).toISOString().split('T')[0];
         const lastDay = new Date(Date.UTC(today.getFullYear(), today.getMonth() + 1, 0)).toISOString().split('T')[0];
@@ -253,7 +245,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // ------------------------------------------
-    // 全員分のPDF出力ボタンのイベントリスナー (★修正★)
+    // 全員分のPDF出力ボタンのイベントリスナー
     // ------------------------------------------
     if (exportAllPdfBtn) {
         exportAllPdfBtn.addEventListener('click', () => {

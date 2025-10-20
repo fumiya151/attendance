@@ -7,9 +7,6 @@ function getLoggedInEmployeeId() {
     return employeeId;
 }
 
-/**
- * JWTトークンとX-Operator-Idを取得するヘルパー関数 (★追加★)
- */
 function getAuthHeaders() {
     const token = sessionStorage.getItem('token');
     const employeeId = sessionStorage.getItem('loggedInEmployeeId');
@@ -60,7 +57,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!headers['Authorization']) return;
 
         try {
-            // ★修正点: 認証ヘッダーを付与
             const res = await fetch(`/api/summaries/${id}`, { headers }); 
             
             if (!res.ok) {
@@ -144,7 +140,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    ...getAuthHeaders() // ★修正点: 認証ヘッダーを付与
+                    ...getAuthHeaders()
                 },
                 body: JSON.stringify(updateData)
             });
